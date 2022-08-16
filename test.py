@@ -2,23 +2,17 @@
 
 from processor_z80 import processor_z80
 
-def attempt_resolve(p, target_value, max_iterations):
-    accumulator = p.get_accumulator()
-
-    operations = []
-
-    for it in range(0, max_iterations):
-        operation = p.pick_operation()
-
-        operations.append(operation)
-
-        if p.get_register(accumulator)['value'] == target_value:
-            return operations
-
-    return None
-
-initialize_with  = [ { 'width' : 8, 'value' : 123 },
-                     { 'width' : 8, 'value' : 9 } ]
+targets  = [
+            { 'initial_values': [ { 'width' : 8, 'value' : 1 },
+                                  { 'width' : 8, 'value' : 1   } ],
+              'result_acc': 2 },
+            { 'initial_values': [ { 'width' : 8, 'value' : 2 },
+                                  { 'width' : 8, 'value' : 1   } ],
+              'result_acc': 3 },
+            { 'initial_values': [ { 'width' : 8, 'value' : 1 },
+                                  { 'width' : 8, 'value' : 2   } ],
+              'result_acc': 3 },
+    ]
 
 acc_target_value = 99  # accumulator target value
 
@@ -31,13 +25,25 @@ best_program    = None
 best_iterations = None
 
 while iterations < max_program_iterations:
-    p = processor_z80(initialize_with)
+    ok = True
 
-    program = attempt_resolve(p, acc_target_value, max_program_length)
+    p = processor_z80()
+    program = p.generate_program()
+
+    accumulator = p.get_accumulator()
+
+    for target in targets:
+        if p.execute_program(target) == False:  # False: in case an execution error occured
+            ok = False
+            break
+
+        if p.get_register(accumulator)['value'] != target_value:
+            ok = False
+            break
 
     iterations += 1
 
-    if program != None and (best_program == None or len(program) < len(best_program)):
+    if ok and (best_program == None or len(program) < len(best_program)):
         best_program    = program
         best_iterations = iterations
 
