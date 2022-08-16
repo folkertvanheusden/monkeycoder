@@ -7,6 +7,13 @@ class processor_z80(processor):
 
         self.init_registers()
 
+        self.instr_mapping = dict()
+        self.instr_mapping[processor.Instruction.i_add] = 'ADD'
+        self.instr_mapping[processor.Instruction.i_sub] = 'SUB'
+        self.instr_mapping[processor.Instruction.i_xor] = 'XOR'
+        self.instr_mapping[processor.Instruction.i_and] = 'AND'
+        self.instr_mapping[processor.Instruction.i_or ] = 'OR'
+
         super().__init__()
 
     def init_registers(self):
@@ -20,12 +27,14 @@ class processor_z80(processor):
         self.registers['L'] = { 'width': 8, 'value': 0, 'set': False }
 
     def pick_an_instruction(self):
-        instr = 0 #random.randint(0, 1)
+        instr_type = 0 #random.randint(0, 1)
 
         instruction = dict()
 
-        if instr == 0:  # ADD
-            instruction['instruction'] = processor.Instruction.i_add
+        if instr_type == 0:  # ADD
+            sub_type = random.choice([ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or ])
+
+            instruction['instruction'] = sub_type
 
             source = { 'type': processor.SourceType.st_reg, 'name': self.pick_a_register() } if random.choice([True, False]) else { 'type': processor.SourceType.st_val, 'value': random.randint(0, 255) }
             instruction['sources']     = [ source ]
@@ -34,11 +43,12 @@ class processor_z80(processor):
             instruction['destination']['type'] = processor.DestinationType.dt_reg
             instruction['destination']['name'] = 'A'
 
+
             if source['type'] == processor.SourceType.st_reg:
-                instruction['opcode'] = f"ADD {instruction['destination']}, {source['name']}"
+                instruction['opcode'] = f"{self.instr_mapping[sub_type]} {instruction['destination']}, {source['name']}"
             
             elif source['type'] == processor.SourceType.st_val:
-                instruction['opcode'] = f"ADD {instruction['destination']}, ${source['value']:02X}"
+                instruction['opcode'] = f"{self.instr_mapping[sub_type]} {instruction['destination']}, ${source['value']:02X}"
 
             else:
                 assert False

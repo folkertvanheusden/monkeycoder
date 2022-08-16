@@ -50,6 +50,10 @@ while iterations < max_program_iterations:
         best_program    = program
         best_iterations = iterations
 
-print(f'Iterations: {best_iterations}, length program: {len(best_program)}')
+if best_program != None:
+    print(f'Iterations: {best_iterations}, length program: {len(best_program)}')
 
-# print(best_program)
+#   print(best_program)
+
+else:
+    print(f'Did not succeed in {iterations} iterations')
