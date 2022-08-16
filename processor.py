@@ -65,6 +65,13 @@ class processor:
         for reg in used_list:
             self.free_register(reg)
 
+    def get_accumulator(self):
+        # on systems with multiple: just pick one
+        pass
+
+    def get_register(self, name):
+        return self.registers[name]
+
     def reset_ram(self):
         self.ram = [ 0 ] * self.ram_size
 
@@ -111,6 +118,12 @@ class processor:
                 return (reg, r)
 
         assert False
+
+    def free_indirect(self, name):
+        for ra in self.indirect[name]['affects']:
+            assert self.registers[ra]['in_use'] == True
+
+            self.registers[ra]['in_use'] = False
 
     def get_register_pair_16(self, reg_msb, reg_lsb):
         return (self.registers[reg_msb]['value'] << 8) | self.registers[reg_lsb]['value']

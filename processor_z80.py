@@ -40,6 +40,9 @@ class processor_z80(processor):
         self.indirect = dict()
         self.indirect['(HL)'] = { 'width': 16, 'affects': ['H', 'L'] }
 
+    def get_accumulator(self):
+        return 'A'
+
     def invoke_add_sub(self, reg_dst, instruction_choice, value):
             if instruction_choice == 'ADD':
                 reg_dst[1]['value'] += value
@@ -80,6 +83,7 @@ class processor_z80(processor):
 
             self.invoke_add_sub(reg_dst, instruction_choice, value)
 
+            self.free_indirect(ind_src[0])
             self.free_register('A')
 
         elif instr_type_choice == 2:
