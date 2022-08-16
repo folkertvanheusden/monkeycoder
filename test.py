@@ -12,16 +12,35 @@ def attempt_resolve(p, target_value, max_iterations):
 
         operations.append(operation)
 
-        print(operation, p.get_register(accumulator))
+        if p.get_register(accumulator)['value'] == target_value:
+            return operations
 
-        if p.get_register(accumulator) == target_value:
-            break
+    return None
 
-    return operations
+initialize_with  = [ { 'width' : 8, 'value' : 123 },
+                     { 'width' : 8, 'value' : 9 } ]
 
-initialize_with = [ { 'width' : 8, 'value' : 123 },
-                    { 'width' : 8, 'value' : 9 } ]
+acc_target_value = 99  # accumulator target value
 
-p = processor_z80(initialize_with)
+max_program_iterations = 1000
+max_program_length     = 1024
 
-print(attempt_resolve(p, 99, 1000))
+iterations   = 0
+
+best_program    = None
+best_iterations = None
+
+while iterations < max_program_iterations:
+    p = processor_z80(initialize_with)
+
+    program = attempt_resolve(p, acc_target_value, max_program_length)
+
+    iterations += 1
+
+    if program != None and (best_program == None or len(program) < len(best_program)):
+        best_program    = program
+        best_iterations = iterations
+
+print(f'Iterations: {best_iterations}')
+
+print(best_program)

@@ -31,18 +31,6 @@ class processor:
             assert 'generate' in op
             assert op['generate'] != None
 
-            assert 'targets'  in op
-            for t in op['targets']:
-                assert t['name'] in self.registers
-
-                assert t['width'] == 8 or t['width'] == 16 or t['width'] == 32 or t['width'] == 64   # TODO make this check smarter
-
-            assert 'sources'  in op
-            for s in op['targets']:
-                assert s['name'] in self.registers
-
-                assert s['width'] == 8 or s['width'] == 16 or s['width'] == 32 or s['width'] == 64   # TODO make this check smarter
-
         assert len(self.indirect) > 0
 
         for i in self.indirect:
