@@ -2,7 +2,7 @@ from processor import processor
 import random
 
 class processor_z80(processor):
-    def __init__(self):
+    def __init__(self, init_registers_with):
         self.operations = dict()
         self.operations['add'] = dict()
         self.operations['add']['generate'] = self.operation_add_sub
@@ -20,9 +20,9 @@ class processor_z80(processor):
 
         self.ram_size = 65536
 
-        super().__init__()
+        super().__init__(init_registers_with)
 
-    def reset_registers(self):
+    def init_registers(self):
         self.registers = dict()
         # affects == None: affects itself, else it means a register is in reality a pair
         self.registers['A'] = { 'width': 8, 'affects': None, 'in_use': False, 'value': 0 }

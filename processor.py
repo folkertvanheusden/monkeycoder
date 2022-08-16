@@ -1,7 +1,11 @@
 import random
 
 class processor:
-    def __init__(self):
+    def __init__(self, init_registers_with):
+        self.init_registers_with = init_registers_with
+
+        self.init_registers()
+
         self.reset_registers()
 
         self.reset_ram()
@@ -14,8 +18,6 @@ class processor:
             assert r['width'] == 8 or r['width'] == 16 or r['width'] == 32 or r['width'] == 64   # TODO make this check smarter
 
             assert r['in_use'] == False
-
-            assert r['value'] == 0
 
             if r['affects'] != None:  # register-pair
                 for a in r['affects']:
@@ -50,6 +52,18 @@ class processor:
 
             for rf in ind['affects']:
                 assert rf in self.registers
+
+    def reset_registers(self):
+        used_list = []
+        for action in self.init_registers_with:
+            reg = self.allocate_random_register(action['width'])
+
+            reg[1]['value'] = action['value']
+
+            used_list.append(reg[0])
+
+        for reg in used_list:
+            self.free_register(reg)
 
     def reset_ram(self):
         self.ram = [ 0 ] * self.ram_size
