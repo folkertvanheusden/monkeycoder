@@ -15,9 +15,7 @@ targets  = [
               'result_acc': 3 },
     ]
 
-acc_target_value = 99  # accumulator target value
-
-max_program_iterations = 10000
+max_program_iterations = 30000
 max_program_length     = 1024
 
 iterations = 0
@@ -43,7 +41,7 @@ while iterations < max_program_iterations:
             ok = False
             break
 
-        if p.get_accumulator() != acc_target_value:
+        if p.get_accumulator() != target['result_acc']:
             ok = False
             break
 
@@ -52,6 +50,8 @@ while iterations < max_program_iterations:
         p.insert_program_init(best_program, target['initial_values'])
 
         best_iterations = iterations
+
+# TODO: remove random instructions and check if it still works
 
 end_ts = time.time()
 
