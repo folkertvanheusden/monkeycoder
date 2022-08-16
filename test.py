@@ -53,7 +53,8 @@ while iterations < max_program_iterations:
 if best_program != None:
     print(f'Iterations: {best_iterations}, length program: {len(best_program)}')
 
-#   print(best_program)
+    for instruction in best_program:
+        print(instruction['opcode'])
 
 else:
     print(f'Did not succeed in {iterations} iterations')

@@ -45,10 +45,10 @@ class processor_z80(processor):
 
 
             if source['type'] == processor.SourceType.st_reg:
-                instruction['opcode'] = f"{self.instr_mapping[sub_type]} {instruction['destination']}, {source['name']}"
+                instruction['opcode'] = f"{self.instr_mapping[sub_type]} {instruction['destination']['name']}, {source['name']}"
             
             elif source['type'] == processor.SourceType.st_val:
-                instruction['opcode'] = f"{self.instr_mapping[sub_type]} {instruction['destination']}, ${source['value']:02X}"
+                instruction['opcode'] = f"{self.instr_mapping[sub_type]} {instruction['destination']['name']}, ${source['value']:02X}"
 
             else:
                 assert False
