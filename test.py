@@ -1,6 +1,7 @@
 #! /usr/bin/python3
 
 from processor_z80 import processor_z80
+import time
 
 targets  = [
             { 'initial_values': [ { 'width' : 8, 'value' : 1 },
@@ -16,10 +17,12 @@ targets  = [
 
 acc_target_value = 99  # accumulator target value
 
-max_program_iterations = 1000
+max_program_iterations = 10000
 max_program_length     = 1024
 
-iterations   = 0
+iterations = 0
+
+start_ts   = time.time()
 
 best_program    = None
 best_iterations = None
@@ -50,8 +53,12 @@ while iterations < max_program_iterations:
 
         best_iterations = iterations
 
+end_ts = time.time()
+
 if best_program != None:
-    print(f'Iterations: {best_iterations}, length program: {len(best_program)}')
+    diff_ts = end_ts - start_ts
+
+    print(f'Iterations: {best_iterations}, length program: {len(best_program)}, took: {diff_ts:.2f} seconds, {max_program_iterations / diff_ts:.2f} iterations per second')
 
     for instruction in best_program:
         print(instruction['opcode'])
