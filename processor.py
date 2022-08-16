@@ -23,7 +23,7 @@ class processor:
 
     # allocate them
     def init_registers(self):
-        pass
+        assert False
 
     # set them to initial values
     def reset_registers(self, initial_values):
@@ -57,16 +57,13 @@ class processor:
         return random.choice(list(self.registers))
 
     def pick_an_instruction(self):
-        pass
-
-    def reset_registers(self):
-        pass
+        assert False
 
     def reset_ram(self):
         self.ram = [ 0 ] * self.ram_size
 
     def get_accumulator(self):
-        pass
+        assert False
 
     def get_register_value(self, reg_name):
         return self.registers[reg_name]['value']
@@ -77,7 +74,7 @@ class processor:
         self.registers[reg_name]['value'] = value
 
     def execute_program(self, initial_values, program):
-        self.reset_registers()
+        self.reset_registers(initial_values)
 
         self.reset_ram()
 
