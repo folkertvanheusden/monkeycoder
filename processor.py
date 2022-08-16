@@ -1,124 +1,122 @@
+from enum import Enum
 import random
 
 class processor:
-    def __init__(self, init_registers_with):
-        self.init_registers_with = init_registers_with
+    class Instruction(Enum):
+        i_add  = 1
+        i_sub  = 2
+        i_xor  = 3
+        i_and  = 4
+        i_or   = 5
+        i_load = 6
 
-        self.init_registers()
+    class SourceType(Enum):
+        st_reg = 1
+        st_val = 2
+        # st_ind = 3  TODO
 
-        self.reset_registers()
+    class DestinationType(Enum):
+        dt_reg = 1
 
-        self.reset_ram()
-
-        assert len(self.registers) > 0
-
-        for reg in self.registers:
-            r = self.registers[reg]
-
-            assert r['width'] == 8 or r['width'] == 16 or r['width'] == 32 or r['width'] == 64   # TODO make this check smarter
-
-            assert r['in_use'] == False
-
-            if r['affects'] != None:  # register-pair
-                for a in r['affects']:
-                    assert a in self.registers
-
-        assert len(self.operations) > 0
-
-        for o in self.operations:
-            op = self.operations[o]
-
-            assert 'generate' in op
-            assert op['generate'] != None
-
-        assert len(self.indirect) > 0
-
-        for i in self.indirect:
-            ind = self.indirect[i]
-
-            assert ind['width'] == 8 or ind['width'] == 16 or ind['width'] == 32 or ind['width'] == 64   # TODO make this check smarter
-
-            for rf in ind['affects']:
-                assert rf in self.registers
-
-    def reset_registers(self):
-        used_list = []
-        for action in self.init_registers_with:
-            reg = self.allocate_random_register(action['width'])
-
-            reg[1]['value'] = action['value']
-
-            used_list.append(reg[0])
-
-        for reg in used_list:
-            self.free_register(reg)
-
-    def get_accumulator(self):
-        # on systems with multiple: just pick one
+    def __init__(self):
         pass
 
-    def get_register(self, name):
-        return self.registers[name]
+    # allocate them
+    def init_registers(self):
+        pass
+
+    # set them to initial values
+    def reset_registers(self, initial_values):
+        self.init_registers()
+
+        for iv in initial_values:
+            reg_found = False
+
+            for r in self.registers:
+                if self.registers[r]['width'] == iv['width'] and self.registers[r]['set'] == False:
+                    self.registers[r]['value'] = iv['value']
+
+                    self.registers[r]['set']   = True
+
+                    reg_found = True
+                    break
+
+            assert reg_found == True
+
+    def generate_program(self, max_length):
+        instruction_count = random.randint(1, max_length)
+
+        program = []
+
+        for nr in range(0, instruction_count):
+            program.append(self.pick_an_instruction())
+
+        return program
+
+    def pick_a_register(self):
+        return random.choice(list(self.registers))
+
+    def pick_an_instruction(self):
+        pass
+
+    def reset_registers(self):
+        pass
 
     def reset_ram(self):
         self.ram = [ 0 ] * self.ram_size
 
-    def allocate_random_register(self, width):
-        for r in self.registers:
-            reg = self.registers[r]
+    def get_accumulator(self):
+        pass
 
-            if reg['width'] == width and reg['in_use'] == False:
-                reg['in_use'] = True
+    def get_register_value(self, reg_name):
+        return self.registers[reg_name]['value']
 
-                return (r, reg)
+    def set_register_value(self, reg_name, value):
+        assert value != None
 
-        assert False
+        self.registers[reg_name]['value'] = value
 
-    def allocate_register(self, name):
-        assert self.registers[name]['in_use'] == False
+    def execute_program(self, initial_values, program):
+        self.reset_registers()
 
-        self.registers[name]['in_use'] = True
+        self.reset_ram()
 
-        return (name, self.registers[name])
+        for instruction in program:
+            if instruction['instruction'] in [ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or ]:
+                work_value = 0
 
-    def free_register(self, name):
-        r = self.registers[name]
+                for source in instruction['sources']:
+                    cur_value = None
 
-        assert r['in_use'] == True
+                    if source['type'] == processor.SourceType.st_reg:
+                        cur_value = self.get_register_value(source['name'])
 
-        r['in_use'] = False
+                    elif source['type'] == processor.SourceType.st_val:
+                        cur_value = source['value']
 
-    def any_register_in_use(self, reg_list):
-        for r in reg_list:
-            if self.registers[r]['in_use'] == True:
-                return True
+                    else:
+                        assert False
 
-        return False
+                    if work_value == None:
+                        work_value = cur_value
 
-    def allocate_random_indirect(self, width):
-        for reg in self.indirect:
-            r = self.indirect[reg]
+                    elif instruction['instruction'] == processor.Instruction.i_add:
+                        work_value += cur_value
 
-            if r['width'] == width and self.any_register_in_use(r['affects']) == False:
-                for ra in r['affects']:
-                    self.registers[ra]['in_use'] = True
+                    elif instruction['instruction'] == processor.Instruction.i_sub:
+                        work_value -= cur_value
 
-                return (reg, r)
+                    elif instruction['instruction'] == processor.Instruction.i_xor:
+                        work_value ^= cur_value
 
-        assert False
+                    elif instruction['instruction'] == processor.Instruction.i_and:
+                        work_value &= cur_value
 
-    def free_indirect(self, name):
-        for ra in self.indirect[name]['affects']:
-            assert self.registers[ra]['in_use'] == True
+                    elif instruction['instruction'] == processor.Instruction.i_or:
+                        work_value |= cur_value
 
-            self.registers[ra]['in_use'] = False
+                    else:
+                        assert False
 
-    def get_register_pair_16(self, reg_msb, reg_lsb):
-        return (self.registers[reg_msb]['value'] << 8) | self.registers[reg_lsb]['value']
-
-    def pick_operation(self):
-        instruction = random.choice(list(self.operations))
-
-        operation = self.operations[instruction]['generate']()
-
-        return operation
+                if instruction['destination']['type'] == processor.DestinationType.dt_reg:
+                    self.set_register_value(instruction['destination']['name'], work_value)

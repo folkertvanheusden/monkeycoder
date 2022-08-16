@@ -27,26 +27,29 @@ best_iterations = None
 while iterations < max_program_iterations:
     ok = True
 
-    p = processor_z80()
-    program = p.generate_program()
+    iterations += 1
 
-    accumulator = p.get_accumulator()
+    p = processor_z80()
+    program = p.generate_program(max_program_length)
+
+    if program == None:
+        continue
+
+    # print(program)
 
     for target in targets:
-        if p.execute_program(target) == False:  # False: in case an execution error occured
+        if p.execute_program(target['initial_values'], program) == False:  # False: in case an execution error occured
             ok = False
             break
 
-        if p.get_register(accumulator)['value'] != target_value:
+        if p.get_accumulator() != acc_target_value:
             ok = False
             break
-
-    iterations += 1
 
     if ok and (best_program == None or len(program) < len(best_program)):
         best_program    = program
         best_iterations = iterations
 
-print(f'Iterations: {best_iterations}')
+print(f'Iterations: {best_iterations}, length program: {len(best_program)}')
 
-print(best_program)
+# print(best_program)
