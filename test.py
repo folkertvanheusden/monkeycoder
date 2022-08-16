@@ -35,8 +35,6 @@ while iterations < max_program_iterations:
     if program == None:
         continue
 
-    # print(program)
-
     for target in targets:
         if p.execute_program(target['initial_values'], program) == False:  # False: in case an execution error occured
             ok = False
@@ -48,6 +46,8 @@ while iterations < max_program_iterations:
 
     if ok and (best_program == None or len(program) < len(best_program)):
         best_program    = program
+        p.insert_program_init(best_program, target['initial_values'])
+
         best_iterations = iterations
 
 if best_program != None:

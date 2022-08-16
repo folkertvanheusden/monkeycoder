@@ -34,9 +34,10 @@ class processor:
 
             for r in self.registers:
                 if self.registers[r]['width'] == iv['width'] and self.registers[r]['set'] == False:
-                    self.registers[r]['value'] = iv['value']
+                    self.registers[r]['value']  = iv['value']
+                    self.registers[r]['ivalue'] = iv['value']
 
-                    self.registers[r]['set']   = True
+                    self.registers[r]['set']    = True
 
                     reg_found = True
                     break
@@ -55,6 +56,9 @@ class processor:
 
     def pick_a_register(self):
         return random.choice(list(self.registers))
+
+    def insert_program_init(self):
+        assert False
 
     def pick_an_instruction(self):
         assert False
