@@ -45,11 +45,11 @@ class processor_z80(processor):
             dest.insert(0, instruction)
 
     def pick_an_instruction(self):
-        instr_type = 0 #random.randint(0, 1)
+        instr_type = random.randint(0, 1)
 
         instruction = dict()
 
-        if instr_type == 0:  # ADD
+        if instr_type == 0:
             sub_type = random.choice([ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or ])
 
             instruction['instruction'] = sub_type
@@ -61,7 +61,6 @@ class processor_z80(processor):
             instruction['destination']['type'] = processor.DestinationType.dt_reg
             instruction['destination']['name'] = 'A'
 
-
             if source['type'] == processor.SourceType.st_reg:
                 instruction['opcode'] = f"{self.instr_mapping[sub_type]} {instruction['destination']['name']}, {source['name']}"
             
@@ -70,6 +69,23 @@ class processor_z80(processor):
 
             else:
                 assert False
+
+        elif instr_type == 1:
+            instruction['instruction'] = processor.Instruction.i_load
+
+            instruction['destination'] = dict()
+            instruction['destination']['type'] = processor.DestinationType.dt_reg
+            instruction['destination']['name'] = self.pick_a_register()
+
+            if random.randint(0, 1) == 0:
+                register = self.pick_a_register()
+                instruction['sources'] = [ { 'type': processor.SourceType.st_reg, 'name': register } ]
+                instruction['opcode'] = f"LD {instruction['destination']['name']}, {register}"
+
+            else:
+                v = random.randint(0, 255)
+                instruction['sources'] = [ { 'type': processor.SourceType.st_val, 'value': v } ]
+                instruction['opcode'] = f"LD {instruction['destination']['name']}, {v}"
 
         else:
             assert False

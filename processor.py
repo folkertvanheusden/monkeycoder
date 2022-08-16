@@ -121,3 +121,37 @@ class processor:
 
                 if instruction['destination']['type'] == processor.DestinationType.dt_reg:
                     self.set_register_value(instruction['destination']['name'], work_value)
+
+                else:
+                    assert False
+
+            elif instruction['instruction'] == processor.Instruction.i_load:
+                work_value = None
+
+                # load should have only one
+                for source in instruction['sources']:
+                    cur_value = None
+
+                    if source['type'] == processor.SourceType.st_reg:
+                        cur_value = self.get_register_value(source['name'])
+
+                    elif source['type'] == processor.SourceType.st_val:
+                        cur_value = source['value']
+
+                    else:
+                        assert False
+
+                    assert work_value == None
+
+                    work_value = cur_value
+
+                assert work_value != None
+
+                if instruction['destination']['type'] == processor.DestinationType.dt_reg:
+                    self.set_register_value(instruction['destination']['name'], work_value)
+
+                else:
+                    assert False
+
+            else:
+                assert False
