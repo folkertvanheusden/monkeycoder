@@ -3,6 +3,7 @@
 import copy
 from processor_z80 import processor_z80
 import random
+import threading
 import time
 
 targets  = [
@@ -43,8 +44,8 @@ max_program_length     = 256
 
 iterations = 0
 
-start_ts   = time.time()
-prev_ts    = start_ts
+start_ts = time.time()
+prev_ts  = start_ts
 
 best_program    = None
 best_iterations = None
@@ -55,54 +56,100 @@ targets_ok_n     = 0
 targets_ok_bestn = 0
 targets_ok_best  = None
 
-while max_program_iterations == None or iterations < max_program_iterations:
-    ok = True
+stop = False
 
-    iterations += 1
+lock = threading.Lock()
 
-    p = processor_z80()
-    program = p.generate_program(max_program_length)
+def search():
+    global iterations
 
-    if program == None:
-        continue
+    global stop
 
-    rc = test_program(p, targets, program)
-    ok = rc[0]
+    global best_program
+    global best_iterations
+    global first_output
 
-    targets_ok_stat += rc[1]
-    targets_ok_n    += 1
+    global targets_ok_stat
+    global targets_ok_n
+    global targets_ok_bestn
+    global targets_ok_best
 
-    if rc[1] > targets_ok_bestn:
-        targets_ok_bestn = rc[1]
-        targets_ok_best  = program
+    global prev_ts
 
-    if ok and (best_program == None or len(program) < len(best_program)):
-        best_program    = program
+    while True:
+        lock.acquire()
 
-        best_iterations = iterations
-
-        if first_output:
-            first_output = False
-
-            print()
-            print(f'First output after {iterations} iterations ({time.time() - start_ts:.2f} seconds)')
-
-        if max_program_iterations == None:
+        if not (stop == False and (max_program_iterations == None or iterations < max_program_iterations)):
+            lock.release()
             break
 
-    now = time.time()
+        iterations += 1
 
-    if now - prev_ts >= 2:
-        prev_ts = now
+        lock.release()
 
-        diff_ts = now - start_ts
+        p = processor_z80()
+        program = p.generate_program(max_program_length)
 
-        print(f'Iterations done: {iterations}, average n_ok: {targets_ok_stat / targets_ok_n:.4f}[{targets_ok_bestn}], run time: {now - start_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second\r', end='')
+        if program == None:
+            continue
+
+        rc = test_program(p, targets, program)
+        ok = rc[0]
+
+        lock.acquire()
+
+        targets_ok_stat += rc[1]
+        targets_ok_n    += 1
+
+        if rc[1] > targets_ok_bestn:
+            targets_ok_bestn = rc[1]
+            targets_ok_best  = program
+
+        if ok and (best_program == None or len(program) < len(best_program)):
+            best_program    = program
+
+            best_iterations = iterations
+
+            if first_output:
+                first_output = False
+
+                print()
+                print(f'First output after {iterations} iterations ({time.time() - start_ts:.2f} seconds)')
+
+            if max_program_iterations == None:
+                lock.release()
+                break
+
+        now = time.time()
+
+        if now - prev_ts >= 2:
+            prev_ts = now
+
+            diff_ts = now - start_ts
+
+            print(f'Iterations done: {iterations}, average n_ok: {targets_ok_stat / targets_ok_n:.4f}[{targets_ok_bestn}], run time: {now - start_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second\r', end='')
+
+        lock.release()
+
+    stop = True
+
+threads = []
+
+for tnr in range(0, 32):
+    thread = threading.Thread(target=search)
+    thread.start()
+
+    threads.append(thread)
+
+for thread in threads:
+    thread.join()
 
 n_deleted     = 0
 
 if best_program != None:
     idx = 0
+
+    p = processor_z80()
 
     while idx < len(best_program):
         work = copy.deepcopy(best_program)
