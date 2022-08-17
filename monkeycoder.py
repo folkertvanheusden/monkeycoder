@@ -2,8 +2,8 @@
 
 import copy
 from processor_z80 import processor_z80
+import multiprocessing
 import random
-import threading
 import time
 
 targets  = [
@@ -37,55 +37,18 @@ def test_program(p, targets, program):
 
     return (ok, n_targets_ok)
 
-random.seed()
-
 max_program_iterations = None
 max_program_length     = 256
 
-iterations = 0
+def search(in_q, out_q):
+    random.seed()
 
-start_ts = time.time()
-prev_ts  = start_ts
+    best_length = max_program_length + 1
 
-best_program    = None
-best_iterations = None
-first_output    = True
+    iterations = 0
 
-targets_ok_stat  = 0
-targets_ok_n     = 0
-targets_ok_bestn = 0
-targets_ok_best  = None
-
-stop = False
-
-lock = threading.Lock()
-
-def search():
-    global iterations
-
-    global stop
-
-    global best_program
-    global best_iterations
-    global first_output
-
-    global targets_ok_stat
-    global targets_ok_n
-    global targets_ok_bestn
-    global targets_ok_best
-
-    global prev_ts
-
-    while True:
-        lock.acquire()
-
-        if not (stop == False and (max_program_iterations == None or iterations < max_program_iterations)):
-            lock.release()
-            break
-
+    while max_program_iterations == None or iterations < max_program_iterations:
         iterations += 1
-
-        lock.release()
 
         p = processor_z80()
         program = p.generate_program(max_program_length)
@@ -96,13 +59,72 @@ def search():
         rc = test_program(p, targets, program)
         ok = rc[0]
 
-        lock.acquire()
+        if ok:
+            len_ = len(program)
 
-        targets_ok_stat += rc[1]
+            if len_ < best_length:
+                best_length = len_
+
+                out_q.put((program, rc[1], iterations, True))
+
+                iterations = 0
+
+        elif iterations >= 1000:
+            out_q.put((None, None, iterations, False))
+
+            iterations = 0
+
+        try:
+            in_q.get_nowait()
+
+            break
+
+        except Exception as e:
+            pass
+
+    out_q.put(None)
+
+stop_q = multiprocessing.Queue()
+data_q = multiprocessing.Queue()
+
+start_ts = time.time()
+prev_ts  = start_ts
+
+processes = []
+
+for tnr in range(0, 32):
+    proces = multiprocessing.Process(target=search, args=(stop_q, data_q,))
+    proces.start()
+
+    processes.append(proces)
+
+iterations = 0
+
+best_program    = None
+best_iterations = None
+first_output    = True
+
+targets_ok_stat  = 0
+targets_ok_n     = 0
+targets_ok_bestn = 0
+targets_ok_best  = None
+
+while True:
+    result = data_q.get()
+    
+    if result == None:
+        break
+
+    iterations += result[2]
+
+    if result[3] == True:
+        program = result[0]
+
+        targets_ok_stat += result[1]
         targets_ok_n    += 1
 
-        if rc[1] > targets_ok_bestn:
-            targets_ok_bestn = rc[1]
+        if result[1] > targets_ok_bestn:
+            targets_ok_bestn = result[1]
             targets_ok_best  = program
 
         if ok and (best_program == None or len(program) < len(best_program)):
@@ -117,32 +139,25 @@ def search():
                 print(f'First output after {iterations} iterations ({time.time() - start_ts:.2f} seconds)')
 
             if max_program_iterations == None:
-                lock.release()
                 break
 
-        now = time.time()
+    now = time.time()
 
-        if now - prev_ts >= 2:
-            prev_ts = now
+    if now - prev_ts >= 2:
+        prev_ts = now
 
-            diff_ts = now - start_ts
+        diff_ts = now - start_ts
 
+        if targets_ok_n > 0:
             print(f'Iterations done: {iterations}, average n_ok: {targets_ok_stat / targets_ok_n:.4f}[{targets_ok_bestn}], run time: {now - start_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second\r', end='')
 
-        lock.release()
+        else:
+            print(f'Iterations done: {iterations}, run time: {now - start_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second\r', end='')
 
-    stop = True
+for proces in processes:
+    stop_q.push('stop')
 
-threads = []
-
-for tnr in range(0, 32):
-    thread = threading.Thread(target=search)
-    thread.start()
-
-    threads.append(thread)
-
-for thread in threads:
-    thread.join()
+    proces.join()
 
 n_deleted     = 0
 
