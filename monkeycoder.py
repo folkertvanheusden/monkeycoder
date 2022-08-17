@@ -1,22 +1,51 @@
 #! /usr/bin/python3
 
 from processor_z80 import processor_z80
+import random
 import time
 
+if 0:
+    targets  = [
+                { 'initial_values': [ { 'width' : 8, 'value' : 1 },
+                                      { 'width' : 8, 'value' : 1 } ],
+                  'result_acc': 2 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 32 },
+                                      { 'width' : 8, 'value' : 16 } ],
+                  'result_acc': 48 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 16 },
+                                      { 'width' : 8, 'value' : 32 } ],
+                  'result_acc': 48 },
+        ]
+
 targets  = [
-            { 'initial_values': [ { 'width' : 8, 'value' : 1 },
-                                  { 'width' : 8, 'value' : 1 } ],
-              'result_acc': 2 },
-            { 'initial_values': [ { 'width' : 8, 'value' : 32 },
-                                  { 'width' : 8, 'value' : 16 } ],
-              'result_acc': 48 },
-            { 'initial_values': [ { 'width' : 8, 'value' : 16 },
-                                  { 'width' : 8, 'value' : 32 } ],
-              'result_acc': 48 },
-    ]
+            { 'initial_values': [ { 'width' : 8, 'value' : 3 },
+                                  { 'width' : 8, 'value' : 3 } ],
+              'result_acc': 9 }
+            ]
+
+def test_program(p, targets, program):
+    ok = True
+
+    n_targets_ok = 0
+
+    for target in targets:
+        if p.execute_program(target['initial_values'], program) == False:  # False: in case an execution error occured
+            print('Failed executing program')
+            ok = False
+            break
+
+        if p.get_accumulator() != target['result_acc']:
+            ok = False
+            break
+
+        n_targets_ok += 1
+
+    return (ok, n_targets_ok)
 
 max_program_iterations = None
 max_program_length     = 256
+
+max_delete_fail_count  = 8
 
 iterations = 0
 
@@ -43,30 +72,18 @@ while max_program_iterations == None or iterations < max_program_iterations:
     if program == None:
         continue
 
-    n_targets_ok = 0
+    rc = test_program(p, targets, program)
+    ok = rc[0]
 
-    for target in targets:
-        if p.execute_program(target['initial_values'], program) == False:  # False: in case an execution error occured
-            print('Failed executing program')
-            ok = False
-            break
-
-        if p.get_accumulator() != target['result_acc']:
-            ok = False
-            break
-
-        n_targets_ok += 1
-
-    targets_ok_stat += n_targets_ok
+    targets_ok_stat += rc[1]
     targets_ok_n    += 1
 
-    if n_targets_ok > targets_ok_bestn:
-        targets_ok_bestn = n_targets_ok
+    if rc[1] > targets_ok_bestn:
+        targets_ok_bestn = rc[1]
         targets_ok_best  = program
 
     if ok and (best_program == None or len(program) < len(best_program)):
         best_program    = program
-        p.insert_program_init(best_program, target['initial_values'])
 
         best_iterations = iterations
 
@@ -88,7 +105,33 @@ while max_program_iterations == None or iterations < max_program_iterations:
 
         print(f'Iterations done: {iterations}, average n_ok: {targets_ok_stat / targets_ok_n:.4f}[{targets_ok_bestn}], run time: {now - start_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second\r', end='')
 
-# TODO: remove random instructions and check if it still works
+n_deleted     = 0
+n_not_deleted = 0
+
+if best_program != None:
+    while len(best_program) > 0:
+        work = best_program
+
+        idx  = random.randint(0, len(work) - 1)
+        del work[idx]
+
+        rc = test_program(p, targets, work)
+        ok = rc[0]
+
+        if ok:
+            best_program = work
+
+            n_deleted += 1
+
+            n_not_deleted = 0
+
+        else:
+            n_not_deleted += 1
+
+            if n_not_deleted > max_delete_fail_count:
+                break
+
+p.insert_program_init(best_program, targets[0]['initial_values'])
 
 end_ts = time.time()
 
@@ -97,7 +140,7 @@ print()
 if best_program != None:
     diff_ts = end_ts - start_ts
 
-    print(f'Iterations: {best_iterations}, length program: {len(best_program)}, took: {diff_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second')
+    print(f'Iterations: {best_iterations}, length program: {len(best_program)}, took: {diff_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second, # deleted: {n_deleted}')
 
     for instruction in best_program:
         print(instruction['opcode'])
