@@ -47,10 +47,11 @@ def search(in_q, out_q):
 
     iterations = 0
 
+    p = processor_z80()
+
     while max_program_iterations == None or iterations < max_program_iterations:
         iterations += 1
 
-        p = processor_z80()
         program = p.generate_program(max_program_length)
 
         if program == None:
