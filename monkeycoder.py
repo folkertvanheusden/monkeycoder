@@ -24,6 +24,7 @@ start_ts   = time.time()
 
 best_program    = None
 best_iterations = None
+first_output    = True
 
 while iterations < max_program_iterations:
     ok = True
@@ -38,6 +39,7 @@ while iterations < max_program_iterations:
 
     for target in targets:
         if p.execute_program(target['initial_values'], program) == False:  # False: in case an execution error occured
+            print('Failed executing program')
             ok = False
             break
 
@@ -51,6 +53,11 @@ while iterations < max_program_iterations:
 
         best_iterations = iterations
 
+        if first_output:
+            first_output = False
+
+            print(f'First output after {iterations} iterations ({time.time() - start_ts:.2f} seconds)')
+
 # TODO: remove random instructions and check if it still works
 
 end_ts = time.time()
@@ -58,7 +65,7 @@ end_ts = time.time()
 if best_program != None:
     diff_ts = end_ts - start_ts
 
-    print(f'Iterations: {best_iterations}, length program: {len(best_program)}, took: {diff_ts:.2f} seconds, {max_program_iterations / diff_ts:.2f} iterations per second')
+    print(f'Iterations: {best_iterations}, length program: {len(best_program)}, took: {diff_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second')
 
     for instruction in best_program:
         print(instruction['opcode'])
