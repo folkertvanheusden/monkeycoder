@@ -18,6 +18,11 @@ targets  = [
               'result_acc': 48 },
     ]
 
+max_program_iterations = None
+max_program_length     = 256
+
+n_processes = 31
+
 def test_program(p, targets, program):
     ok = True
 
@@ -36,9 +41,6 @@ def test_program(p, targets, program):
             n_targets_ok += 1
 
     return (ok, n_targets_ok)
-
-max_program_iterations = None
-max_program_length     = 256
 
 def search(in_q, out_q):
     random.seed()
@@ -76,7 +78,8 @@ def search(in_q, out_q):
             iterations = 0
 
         try:
-            in_q.get_nowait()
+            if in_q.get_nowait() == 'stop':
+                break
 
             break
 
@@ -93,7 +96,7 @@ prev_ts  = start_ts
 
 processes = []
 
-for tnr in range(0, 32):
+for tnr in range(0, n_processes):
     proces = multiprocessing.Process(target=search, args=(stop_q, data_q,))
     proces.start()
 
@@ -156,16 +159,17 @@ while True:
             print(f'Iterations done: {iterations}, run time: {now - start_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second\r', end='')
 
 for proces in processes:
-    stop_q.push('stop')
+    stop_q.put('stop')
 
+for proces in processes:
     proces.join()
 
 n_deleted     = 0
 
+p = processor_z80()
+
 if best_program != None:
     idx = 0
-
-    p = processor_z80()
 
     while idx < len(best_program):
         work = copy.deepcopy(best_program)
@@ -183,7 +187,8 @@ if best_program != None:
         else:
             idx += 1
 
-best_program = p.get_program_init(targets[0]['initial_values']) + best_program
+if best_program != None:
+    best_program = p.get_program_init(targets[0]['initial_values']) + best_program
 
 end_ts = time.time()
 
