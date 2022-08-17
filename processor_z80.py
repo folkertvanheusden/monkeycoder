@@ -1,5 +1,6 @@
 from processor import processor
 import random
+from typing import List
 
 class processor_z80(processor):
     def __init__(self):
@@ -32,7 +33,7 @@ class processor_z80(processor):
         self.registers['BC'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set': False, 'pair': ['B', 'C'], 'dest_allowed': False }
         self.registers['DE'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set': False, 'pair': ['D', 'E'], 'dest_allowed': False }
 
-    def get_program_init(self, initial_values: dict) -> dict:
+    def get_program_init(self, initial_values: dict) -> List[dict]:
         self.reset_registers(initial_values)
 
         instructions = []
@@ -49,7 +50,7 @@ class processor_z80(processor):
             instruction: dict = {}
             instruction['instruction'] = processor.Instruction.i_load
             instruction['sources']     = [ { 'type': processor.SourceType.st_val, 'value': 0 } ]
-            instruction['destination']: dict = {}
+            instruction['destination'] = {}
             instruction['destination']['type'] = processor.DestinationType.dt_reg
             instruction['destination']['name'] = register
             instruction['opcode'] = f"LD {instruction['destination']['name']}, {v}"
@@ -73,7 +74,7 @@ class processor_z80(processor):
             source = { 'type': processor.SourceType.st_reg, 'name': self.pick_a_register(width, None) } if random.choice([True, False]) or width == 16 else { 'type': processor.SourceType.st_val, 'value': random.randint(0, 255) }
             instruction['sources']     = [ source ]
 
-            instruction['destination']: dict = {}
+            instruction['destination'] = {}
             instruction['destination']['type'] = processor.DestinationType.dt_reg
             instruction['destination']['name'] = 'A' if width == 8 else 'HL'
 
@@ -89,7 +90,7 @@ class processor_z80(processor):
         elif instr_type == 1:
             instruction['instruction'] = processor.Instruction.i_load
 
-            instruction['destination']: dict = {}
+            instruction['destination'] = {}
             instruction['destination']['type'] = processor.DestinationType.dt_reg
             instruction['destination']['name'] = self.pick_a_register(8, True)
 
@@ -109,7 +110,7 @@ class processor_z80(processor):
                 instruction['instruction'] = processor.Instruction.i_shift_r
                 instruction['shift_n']     = 1  # Z80 can only shift 1 bit at a time
 
-                instruction['destination']: dict = {}
+                instruction['destination'] = {}
                 instruction['destination']['type'] = processor.DestinationType.dt_reg
                 instruction['destination']['name'] = self.pick_a_register(8, True)
 
@@ -119,7 +120,7 @@ class processor_z80(processor):
                 instruction['instruction'] = processor.Instruction.i_rot_circ_r
                 instruction['shift_n']     = 1  # Z80 can only shift 1 bit at a time
 
-                instruction['destination']: dict = {}
+                instruction['destination'] = {}
                 instruction['destination']['type'] = processor.DestinationType.dt_reg
                 instruction['destination']['name'] = self.pick_a_register(8, True)
 

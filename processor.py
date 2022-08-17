@@ -60,7 +60,7 @@ class processor:
 
         return program
 
-    def pick_a_register(self, width: int, can_be_destination: bool) -> dict:
+    def pick_a_register(self, width: int, can_be_destination: Optional[bool]) -> dict:
         while True:
             register = random.choice(list(self.registers))
 
@@ -72,7 +72,7 @@ class processor:
                 else:
                     return register
 
-    def get_program_init(self) -> list[dict]:
+    def get_program_init(self, initial_values: dict) -> List[dict]:
         assert False
 
     def pick_an_instruction(self) -> dict:
@@ -81,7 +81,7 @@ class processor:
     def reset_ram(self) -> None:
         self.ram = [ 0 ] * self.ram_size
 
-    def get_accumulator(self) -> dict:
+    def get_accumulator(self) -> int:
         assert False
 
     def get_register_value(self, reg_name: str) -> int:
@@ -135,10 +135,11 @@ class processor:
 
         for instruction in program:
             if instruction['instruction'] in [ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or ]:
-                work_value = None
+                work_value: int = -1
+                first_value: bool = True
 
                 for source in instruction['sources']:
-                    cur_value: Optional[int] = None
+                    cur_value: int = -1
 
                     if source['type'] == processor.SourceType.st_reg:
                         cur_value = self.get_register_value(source['name'])
@@ -149,7 +150,9 @@ class processor:
                     else:
                         assert False
 
-                    if work_value == None:
+                    if first_value == True:
+                        first_value = False
+
                         work_value = cur_value
 
                     elif instruction['instruction'] == processor.Instruction.i_add:
