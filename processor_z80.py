@@ -9,7 +9,7 @@ class processor_z80(processor):
 
         self.init_registers()
 
-        self.instr_mapping = dict()
+        self.instr_mapping: dict = {}
         self.instr_mapping[processor.Instruction.i_add       ] = 'ADD'
         self.instr_mapping[processor.Instruction.i_sub       ] = 'SUB'
         self.instr_mapping[processor.Instruction.i_xor       ] = 'XOR'
@@ -20,7 +20,7 @@ class processor_z80(processor):
         self.instr_mapping[processor.Instruction.i_rot_circ_r] = 'RRC'
 
     def init_registers(self) -> None:
-        self.registers = dict()
+        self.registers: dict = {}
         self.registers['A'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
         self.registers['B'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
         self.registers['C'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
@@ -46,10 +46,10 @@ class processor_z80(processor):
             if v == None:
                 v = 0
 
-            instruction = dict()
+            instruction: dict = {}
             instruction['instruction'] = processor.Instruction.i_load
             instruction['sources']     = [ { 'type': processor.SourceType.st_val, 'value': 0 } ]
-            instruction['destination'] = dict()
+            instruction['destination']: dict = {}
             instruction['destination']['type'] = processor.DestinationType.dt_reg
             instruction['destination']['name'] = register
             instruction['opcode'] = f"LD {instruction['destination']['name']}, {v}"
@@ -61,7 +61,7 @@ class processor_z80(processor):
     def pick_an_instruction(self) -> dict:
         instr_type = random.randint(0, 2)
 
-        instruction = dict()
+        instruction: dict = {}
 
         if instr_type == 0:
             sub_type = random.choice([ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or ])
@@ -73,7 +73,7 @@ class processor_z80(processor):
             source = { 'type': processor.SourceType.st_reg, 'name': self.pick_a_register(width, None) } if random.choice([True, False]) or width == 16 else { 'type': processor.SourceType.st_val, 'value': random.randint(0, 255) }
             instruction['sources']     = [ source ]
 
-            instruction['destination'] = dict()
+            instruction['destination']: dict = {}
             instruction['destination']['type'] = processor.DestinationType.dt_reg
             instruction['destination']['name'] = 'A' if width == 8 else 'HL'
 
@@ -89,7 +89,7 @@ class processor_z80(processor):
         elif instr_type == 1:
             instruction['instruction'] = processor.Instruction.i_load
 
-            instruction['destination'] = dict()
+            instruction['destination']: dict = {}
             instruction['destination']['type'] = processor.DestinationType.dt_reg
             instruction['destination']['name'] = self.pick_a_register(8, True)
 
@@ -109,7 +109,7 @@ class processor_z80(processor):
                 instruction['instruction'] = processor.Instruction.i_shift_r
                 instruction['shift_n']     = 1  # Z80 can only shift 1 bit at a time
 
-                instruction['destination'] = dict()
+                instruction['destination']: dict = {}
                 instruction['destination']['type'] = processor.DestinationType.dt_reg
                 instruction['destination']['name'] = self.pick_a_register(8, True)
 
@@ -119,7 +119,7 @@ class processor_z80(processor):
                 instruction['instruction'] = processor.Instruction.i_rot_circ_r
                 instruction['shift_n']     = 1  # Z80 can only shift 1 bit at a time
 
-                instruction['destination'] = dict()
+                instruction['destination']: dict = {}
                 instruction['destination']['type'] = processor.DestinationType.dt_reg
                 instruction['destination']['name'] = self.pick_a_register(8, True)
 

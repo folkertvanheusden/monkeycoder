@@ -1,6 +1,6 @@
 from enum import Enum
 import random
-from typing import Tuple, Callable, List
+from typing import Callable, List, Optional, Tuple
 
 class processor:
     class Instruction(Enum):
@@ -24,7 +24,7 @@ class processor:
     masks = { 8: 255, 16: 65535 }
 
     def __init__(self) -> None:
-        self.registers: dict = dict()
+        self.registers: dict = {}
         self.ram_size: int   = 0
 
     # allocate them
@@ -138,7 +138,7 @@ class processor:
                 work_value = None
 
                 for source in instruction['sources']:
-                    cur_value = None
+                    cur_value: Optional[int] = None
 
                     if source['type'] == processor.SourceType.st_reg:
                         cur_value = self.get_register_value(source['name'])

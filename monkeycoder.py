@@ -181,7 +181,7 @@ while True:
     if result[3] == True:
         program = result[0]
 
-        if ok and (best_program is None or len(program) < len(best_program)):
+        if best_program is None or len(program) < len(best_program):
             best_program    = program
 
             best_iterations = iterations
