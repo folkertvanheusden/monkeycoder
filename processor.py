@@ -89,13 +89,22 @@ class processor:
             value = 0
 
             for dest in self.registers[reg_name]['pair']:
+                cur_byte = self.registers[dest]['value']
+                assert cur_byte >= 0
+                assert cur_byte < 256
+
                 value <<= 8
-                value |= self.registers[dest]['value']
+                value |= cur_byte
 
             return value
 
         else:
-            return self.registers[reg_name]['value']
+            cur_byte = self.registers[reg_name]['value']
+
+            assert cur_byte >= 0
+            assert cur_byte < 256
+
+            return cur_byte
 
     def set_register_value(self, reg_name, value):
         assert value != None
