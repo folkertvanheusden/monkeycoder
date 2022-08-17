@@ -179,26 +179,19 @@ class processor:
                     assert False
 
             elif instruction['instruction'] == processor.Instruction.i_load:
-                work_value = None
+                # load should have only one source
+                assert len(instruction['sources']) == 1
 
-                # load should have only one
-                for source in instruction['sources']:
-                    cur_value = None
+                source = instruction['sources'][0]
 
-                    if source['type'] == processor.SourceType.st_reg:
-                        cur_value = self.get_register_value(source['name'])
+                if source['type'] == processor.SourceType.st_reg:
+                    work_value = self.get_register_value(source['name'])
 
-                    elif source['type'] == processor.SourceType.st_val:
-                        cur_value = source['value']
+                elif source['type'] == processor.SourceType.st_val:
+                    work_value = source['value']
 
-                    else:
-                        assert False
-
-                    assert work_value == None
-
-                    work_value = cur_value
-
-                assert work_value != None
+                else:
+                    assert False
 
                 if instruction['destination']['type'] == processor.DestinationType.dt_reg:
                     self.set_register_value(instruction['destination']['name'], work_value)
@@ -207,35 +200,41 @@ class processor:
                     assert False
 
             elif instruction['instruction'] == processor.Instruction.i_shift_r:
-                work_value = self.get_register_value(instruction['destination']['name'])
+                register = instruction['destination']['name']
+
+                work_value = self.get_register_value(register)
 
                 work_value >>= instruction['shift_n']
 
-                self.set_register_value(instruction['destination']['name'], work_value)
+                self.set_register_value(register, work_value)
 
             elif instruction['instruction'] == processor.Instruction.i_rot_circ_r:
-                work_value = self.get_register_value(instruction['destination']['name'])
+                register = instruction['destination']['name']
+
+                work_value = self.get_register_value(register)
 
                 old_0 = work_value & 1
 
                 work_value >>= instruction['shift_n']
 
-                work_value |= old_0 << (self.registers[instruction['destination']['name']]['width'] - 1)
+                work_value |= old_0 << (self.registers[register]['width'] - 1)
 
-                self.set_register_value(instruction['destination']['name'], work_value)
+                self.set_register_value(register, work_value)
 
             elif instruction['instruction'] == processor.Instruction.i_rot_circ_l:
-                work_value = self.get_register_value(instruction['destination']['name'])
+                register = instruction['destination']['name']
+
+                work_value = self.get_register_value(register)
 
                 old_7 = 1 if work_value & 128 else 0
 
                 work_value <<= instruction['shift_n']
 
-                work_value &= processor.masks[self.registers[instruction['destination']['name']]['width']]
+                work_value &= processor.masks[self.registers[register]['width']]
 
                 work_value |= old_7
 
-                self.set_register_value(instruction['destination']['name'], work_value)
+                self.set_register_value(register, work_value)
 
             else:
                 assert False
