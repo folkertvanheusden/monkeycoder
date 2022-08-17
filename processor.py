@@ -1,5 +1,6 @@
 from enum import Enum
 import random
+from typing import Tuple, Callable, List
 
 class processor:
     class Instruction(Enum):
@@ -22,19 +23,20 @@ class processor:
 
     masks = { 8: 255, 16: 65535 }
 
-    def __init__(self):
-        pass
+    def __init__(self) -> None:
+        self.registers: dict = dict()
+        self.ram_size: int   = 0
 
     # allocate them
-    def init_registers(self):
+    def init_registers(self) -> None:
         assert False
 
     # set them to initial values
-    def reset_registers(self, initial_values):
+    def reset_registers(self, initial_values: dict) -> None:
         self.init_registers()
 
         for iv in initial_values:
-            reg_found = False
+            reg_found: bool = False
 
             for r in self.registers:
                 if self.registers[r]['width'] == iv['width'] and self.registers[r]['set'] == False:
@@ -48,17 +50,17 @@ class processor:
 
             assert reg_found == True
 
-    def generate_program(self, max_length):
-        instruction_count = random.randint(1, max_length)
+    def generate_program(self, max_length: int) -> list[dict]:
+        instruction_count: int = random.randint(1, max_length)
 
-        program = []
+        program: list[dict] = []
 
         for nr in range(0, instruction_count):
             program.append(self.pick_an_instruction())
 
         return program
 
-    def pick_a_register(self, width, can_be_destination):
+    def pick_a_register(self, width: int, can_be_destination: bool) -> dict:
         while True:
             register = random.choice(list(self.registers))
 
@@ -70,19 +72,19 @@ class processor:
                 else:
                     return register
 
-    def insert_program_init(self):
+    def get_program_init(self) -> list[dict]:
         assert False
 
-    def pick_an_instruction(self):
+    def pick_an_instruction(self) -> dict:
         assert False
 
-    def reset_ram(self):
+    def reset_ram(self) -> None:
         self.ram = [ 0 ] * self.ram_size
 
-    def get_accumulator(self):
+    def get_accumulator(self) -> dict:
         assert False
 
-    def get_register_value(self, reg_name):
+    def get_register_value(self, reg_name: str) -> int:
         is_pair = 'pair' in self.registers[reg_name]
 
         if is_pair:
@@ -97,7 +99,7 @@ class processor:
         else:
             return self.registers[reg_name]['value']
 
-    def set_register_value(self, reg_name, value):
+    def set_register_value(self, reg_name: str, value: int) -> None:
         assert value != None
 
         is_pair = 'pair' in self.registers[reg_name]
@@ -110,14 +112,14 @@ class processor:
         else:
             self.registers[reg_name]['value'] = value
 
-    def execute_program(self, initial_values, program):
+    def execute_program(self, initial_values: dict, program: dict) -> None:
         self.reset_registers(initial_values)
 
         self.reset_ram()
 
         for instruction in program:
             if instruction['instruction'] in [ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or ]:
-                work_value = 0
+                work_value = None
 
                 for source in instruction['sources']:
                     cur_value = None

@@ -18,7 +18,7 @@ targets  = [
               'result_acc': 48 },
     ]
 
-def test_program(p, targets, program):
+def test_program(p, targets: list[dict], program: list[dict]):
     ok = True
 
     n_targets_ok = 0
@@ -40,7 +40,7 @@ def test_program(p, targets, program):
 max_program_iterations = None
 max_program_length     = 256
 
-def search(in_q, out_q):
+def search(in_q: multiprocessing.Queue, out_q: multiprocessing.Queue) -> None:
     random.seed()
 
     best_length = max_program_length + 1

@@ -3,6 +3,8 @@ import random
 
 class processor_z80(processor):
     def __init__(self):
+        super().__init__()
+
         self.ram_size = 65536
 
         self.init_registers()
@@ -17,9 +19,7 @@ class processor_z80(processor):
         self.instr_mapping[processor.Instruction.i_shift_r   ] = 'SRL'
         self.instr_mapping[processor.Instruction.i_rot_circ_r] = 'RRC'
 
-        super().__init__()
-
-    def init_registers(self):
+    def init_registers(self) -> None:
         self.registers = dict()
         self.registers['A'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
         self.registers['B'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
@@ -32,7 +32,7 @@ class processor_z80(processor):
         self.registers['BC'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set': False, 'pair': ['B', 'C'], 'dest_allowed': False }
         self.registers['DE'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set': False, 'pair': ['D', 'E'], 'dest_allowed': False }
 
-    def get_program_init(self, initial_values):
+    def get_program_init(self, initial_values: dict) -> dict:
         self.reset_registers(initial_values)
 
         instructions = []
@@ -58,7 +58,7 @@ class processor_z80(processor):
 
         return instructions
 
-    def pick_an_instruction(self):
+    def pick_an_instruction(self) -> dict:
         instr_type = random.randint(0, 2)
 
         instruction = dict()
@@ -130,5 +130,5 @@ class processor_z80(processor):
 
         return instruction
 
-    def get_accumulator(self):
+    def get_accumulator(self) -> int:
         return self.get_register_value('A')
