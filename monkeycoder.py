@@ -36,6 +36,8 @@ def test_program(p, targets, program):
 
     return (ok, n_targets_ok)
 
+random.seed()
+
 max_program_iterations = None
 max_program_length     = 256
 
