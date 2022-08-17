@@ -50,7 +50,8 @@ def search(in_q, out_q):
 
     best_length = max_program_length + 1
 
-    iterations = 0
+    iterations   = 0
+    n_targets_ok = 0
 
     p = processor_z80()
 
@@ -59,11 +60,10 @@ def search(in_q, out_q):
 
         program = p.generate_program(max_program_length)
 
-        if program == None:
-            continue
-
         rc = test_program(p, targets, program)
         ok = rc[0]
+
+        n_targets_ok += rc[1]
 
         if ok:
             len_ = len(program)
@@ -71,14 +71,16 @@ def search(in_q, out_q):
             if len_ < best_length:
                 best_length = len_
 
-                out_q.put((program, rc[1], iterations, True))
+                out_q.put((program, n_targets_ok, iterations, True))
 
-                iterations = 0
+                iterations   = 0
+                n_targets_ok = 0
 
         elif iterations >= 1000:
-            out_q.put((None, None, iterations, False))
+            out_q.put((None, n_targets_ok, iterations, False))
 
-            iterations = 0
+            iterations   = 0
+            n_targets_ok = 0
 
         if not ok and rc[1] > 0:
             # combine with new & shuffle then try that
@@ -116,10 +118,7 @@ best_program    = None
 best_iterations = None
 first_output    = True
 
-targets_ok_stat  = 0
 targets_ok_n     = 0
-targets_ok_bestn = 0
-targets_ok_best  = None
 
 while True:
     result = data_q.get()
@@ -129,15 +128,11 @@ while True:
 
     iterations += result[2]
 
+    if result[1] != None:
+        targets_ok_n += result[1]
+
     if result[3] == True:
         program = result[0]
-
-        targets_ok_stat += result[1]
-        targets_ok_n    += 1
-
-        if result[1] > targets_ok_bestn:
-            targets_ok_bestn = result[1]
-            targets_ok_best  = program
 
         if ok and (best_program == None or len(program) < len(best_program)):
             best_program    = program
@@ -160,11 +155,7 @@ while True:
 
         diff_ts = now - start_ts
 
-        if targets_ok_n > 0:
-            print(f'Iterations done: {iterations}, average n_ok: {targets_ok_stat / targets_ok_n:.4f}[{targets_ok_bestn}], run time: {now - start_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second\r', end='')
-
-        else:
-            print(f'Iterations done: {iterations}, run time: {now - start_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second\r', end='')
+        print(f'Iterations done: {iterations}, average n_ok: {targets_ok_n / iterations:.4f}[{targets_ok_n}], run time: {now - start_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second\r', end='')
 
 for proces in processes:
     stop_q.put('stop')
