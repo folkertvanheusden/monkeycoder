@@ -19,26 +19,30 @@ targets  = [
            { 'initial_values': [ { 'width' : 8, 'value' : 16 },
                                   { 'width' : 8, 'value' : 32 } ],
               'result_acc': 48 },
+           { 'initial_values': [ { 'width' : 8, 'value' : 254 },
+                                  { 'width' : 8, 'value' : 8 } ],
+              'result_acc': 7 },
     ]
 
-max_program_iterations = None
-max_program_length     = 128
-max_modify_iterations  = 2048
+max_program_iterations    = None
+max_program_length        = 128
+max_modify_iterations     = 128
+max_modifications_per_run = 128
 
 n_processes = 31
 
-def test_program(p, targets, program):
+def test_program(proc, targets, program):
     ok = True
 
     n_targets_ok = 0
 
     for target in targets:
-        if p.execute_program(target['initial_values'], program) == False:  # False: in case an execution error occured
+        if proc.execute_program(target['initial_values'], program) == False:  # False: in case an execution error occured
             print('Failed executing program')
             ok = False
             break
 
-        if p.get_accumulator() != target['result_acc']:
+        if proc.get_accumulator() != target['result_acc']:
             ok = False
 
         else:
@@ -54,9 +58,9 @@ def search(stop_q, out_q):
     iterations   = 0
     n_targets_ok = 0
 
-    p = processor_z80()
+    proc = processor_z80()
 
-    while max_program_iterations == None or iterations < max_program_iterations:
+    while max_program_iterations is None or iterations < max_program_iterations:
         try:
             if stop_q.get_nowait() == 'stop':
                 break
@@ -69,9 +73,9 @@ def search(stop_q, out_q):
         # search for a program
         iterations += 1
 
-        program = p.generate_program(max_program_length)
+        program = proc.generate_program(max_program_length)
 
-        rc = test_program(p, targets, program)
+        rc = test_program(proc, targets, program)
         ok = rc[0]
 
         n_targets_ok += rc[1]
@@ -99,32 +103,32 @@ def search(stop_q, out_q):
             for mi in range(0, max_modify_iterations):
                 work = copy.deepcopy(program)
 
-                if len(work) < 2:
-                    break
+                operations_n = random.randint(1, max_modifications_per_run)
 
-                replace_n = random.randint(1, len(work))
+                for mri in range(0, operations_n):
+                    if len(work) < 2:
+                        break
 
-                for mri in range(0, replace_n):
                     idx = random.randint(0, len(work) - 1)
 
                     action = random.choice([0, 1, 2, 3])
 
                     if action == 0:  # replace
-                        work[idx] = p.pick_an_instruction()
+                        work[idx] = proc.pick_an_instruction()
 
                     elif action == 1:  # insert
-                        work.insert(idx, p.pick_an_instruction())
+                        work.insert(idx, proc.pick_an_instruction())
 
                     elif action == 2:  # delete
                         del work[idx]
 
                     elif action == 3:  # append
-                        work.append(p.pick_an_instruction())
+                        work.append(proc.pick_an_instruction())
 
                     else:
                         assert False
 
-                modify_rc = test_program(p, targets, work)
+                modify_rc = test_program(proc, targets, work)
                 if modify_rc[0] or modify_rc[1] > rc[1]:  # finished or improved?
 
                     if modify_rc[1] >= 3:
@@ -164,19 +168,19 @@ targets_ok_n     = 0
 
 while True:
     result = data_q.get()
-    
-    if result == None:
+
+    if result is None:
         break
 
     iterations += result[2]
 
-    if result[1] != None:
+    if result[1] is not None:
         targets_ok_n += result[1]
 
     if result[3] == True:
         program = result[0]
 
-        if ok and (best_program == None or len(program) < len(best_program)):
+        if ok and (best_program is None or len(program) < len(best_program)):
             best_program    = program
 
             best_iterations = iterations
@@ -187,7 +191,7 @@ while True:
                 print()
                 print(f'First output after {iterations} iterations ({time.time() - start_ts:.2f} seconds)')
 
-            if max_program_iterations == None:
+            if max_program_iterations is None:
                 break
 
     now = time.time()
@@ -209,7 +213,7 @@ n_deleted     = 0
 
 p = processor_z80()
 
-if best_program != None:
+if best_program is not None:
     idx = 0
 
     while idx < len(best_program):
@@ -228,14 +232,14 @@ if best_program != None:
         else:
             idx += 1
 
-if best_program != None:
+if best_program is not None:
     best_program = p.get_program_init(targets[0]['initial_values']) + best_program
 
 end_ts = time.time()
 
 print()
 
-if best_program != None:
+if best_program is not None:
     diff_ts = end_ts - start_ts
 
     print(f'Iterations: {best_iterations}, length program: {len(best_program)}, took: {diff_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second, # deleted: {n_deleted}')
