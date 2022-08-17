@@ -33,6 +33,10 @@ class processor_z80(processor):
         self.reset_registers(initial_values)
 
         for register in self.registers:
+            is_pair = 'pair' in self.registers[register]
+            if is_pair:
+                continue
+
             v = self.registers[register]['ivalue']
             if v == None:
                 v = 0
