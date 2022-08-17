@@ -18,13 +18,16 @@ class processor_z80(processor):
 
     def init_registers(self):
         self.registers = dict()
-        self.registers['A'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False }
-        self.registers['B'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False }
-        self.registers['C'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False }
-        self.registers['D'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False }
-        self.registers['E'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False }
-        self.registers['H'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False }
-        self.registers['L'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False }
+        self.registers['A'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
+        self.registers['B'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
+        self.registers['C'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
+        self.registers['D'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
+        self.registers['E'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
+        self.registers['H'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
+        self.registers['L'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
+        self.registers['HL'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set': False, 'pair': ['H', 'L'], 'dest_allowed': True }
+        self.registers['BC'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set': False, 'pair': ['B', 'C'], 'dest_allowed': False }
+        self.registers['DE'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set': False, 'pair': ['D', 'E'], 'dest_allowed': False }
 
     def insert_program_init(self, dest, initial_values):
         self.reset_registers(initial_values)
@@ -54,12 +57,14 @@ class processor_z80(processor):
 
             instruction['instruction'] = sub_type
 
-            source = { 'type': processor.SourceType.st_reg, 'name': self.pick_a_register() } if random.choice([True, False]) else { 'type': processor.SourceType.st_val, 'value': random.randint(0, 255) }
+            width = random.choice([8, 16]) if sub_type == processor.Instruction.i_add else 8
+
+            source = { 'type': processor.SourceType.st_reg, 'name': self.pick_a_register(width, None) } if random.choice([True, False]) or width == 16 else { 'type': processor.SourceType.st_val, 'value': random.randint(0, 255) }
             instruction['sources']     = [ source ]
 
             instruction['destination'] = dict()
             instruction['destination']['type'] = processor.DestinationType.dt_reg
-            instruction['destination']['name'] = 'A'
+            instruction['destination']['name'] = 'A' if width == 8 else 'HL'
 
             if source['type'] == processor.SourceType.st_reg:
                 instruction['opcode'] = f"{self.instr_mapping[sub_type]} {instruction['destination']['name']}, {source['name']}"
@@ -75,10 +80,11 @@ class processor_z80(processor):
 
             instruction['destination'] = dict()
             instruction['destination']['type'] = processor.DestinationType.dt_reg
-            instruction['destination']['name'] = self.pick_a_register()
+            instruction['destination']['name'] = self.pick_a_register(8, True)
 
             if random.randint(0, 1) == 0:
-                register = self.pick_a_register()
+                register = self.pick_a_register(8, True)
+
                 instruction['sources'] = [ { 'type': processor.SourceType.st_reg, 'name': register } ]
                 instruction['opcode'] = f"LD {instruction['destination']['name']}, {register}"
 

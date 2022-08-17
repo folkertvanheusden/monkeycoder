@@ -54,8 +54,17 @@ class processor:
 
         return program
 
-    def pick_a_register(self):
-        return random.choice(list(self.registers))
+    def pick_a_register(self, width, can_be_destination):
+        while True:
+            register = random.choice(list(self.registers))
+
+            if self.registers[register]['width'] == width or width == None:
+                if can_be_destination == True:
+                    if self.registers[register]['dest_allowed'] == True:
+                        return register
+
+                else:
+                    return register
 
     def insert_program_init(self):
         assert False
@@ -70,12 +79,32 @@ class processor:
         assert False
 
     def get_register_value(self, reg_name):
-        return self.registers[reg_name]['value']
+        is_pair = 'pair' in self.registers[reg_name]
+
+        if is_pair:
+            value = 0
+
+            for dest in self.registers(reg_name)['pair']:
+                value |= self.registers[dest]
+                value <<= 8
+
+            return value
+
+        else:
+            return self.registers[reg_name]['value']
 
     def set_register_value(self, reg_name, value):
         assert value != None
 
-        self.registers[reg_name]['value'] = value
+        is_pair = 'pair' in self.registers[reg_name]
+
+        if is_pair:
+            for dest in reversed(self.registers(reg_name)['pair']):
+                self.registers[dest] = value & 255
+                value >>= 8
+
+        else:
+            self.registers[reg_name]['value'] = value
 
     def execute_program(self, initial_values, program):
         self.reset_registers(initial_values)
