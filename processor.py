@@ -84,8 +84,8 @@ class processor:
         if is_pair:
             value = 0
 
-            for dest in self.registers(reg_name)['pair']:
-                value |= self.registers[dest]
+            for dest in self.registers[reg_name]['pair']:
+                value |= self.registers[dest]['value']
                 value <<= 8
 
             return value
@@ -99,8 +99,8 @@ class processor:
         is_pair = 'pair' in self.registers[reg_name]
 
         if is_pair:
-            for dest in reversed(self.registers(reg_name)['pair']):
-                self.registers[dest] = value & 255
+            for dest in reversed(self.registers[reg_name]['pair']):
+                self.registers[dest]['value'] = value & 255
                 value >>= 8
 
         else:
