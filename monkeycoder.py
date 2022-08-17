@@ -7,6 +7,9 @@ import random
 import time
 
 targets  = [
+            { 'initial_values': [ { 'width' : 8, 'value' : 0 },
+                                  { 'width' : 8, 'value' : 0 } ],
+              'result_acc': 0 },
             { 'initial_values': [ { 'width' : 8, 'value' : 1 },
                                   { 'width' : 8, 'value' : 1 } ],
               'result_acc': 2 },
@@ -16,20 +19,30 @@ targets  = [
            { 'initial_values': [ { 'width' : 8, 'value' : 16 },
                                   { 'width' : 8, 'value' : 32 } ],
               'result_acc': 48 },
+           { 'initial_values': [ { 'width' : 8, 'value' : 254 },
+                                  { 'width' : 8, 'value' : 8 } ],
+              'result_acc': 7 },
     ]
 
-def test_program(p, targets: list[dict], program: list[dict]):
+max_program_iterations    = None
+max_program_length        = 128
+max_modify_iterations     = 16
+max_modifications_per_run = 16
+
+n_processes = 31
+
+def test_program(proc, targets: list[dict], program: list[dict]):
     ok = True
 
     n_targets_ok = 0
 
     for target in targets:
-        if p.execute_program(target['initial_values'], program) == False:  # False: in case an execution error occured
+        if proc.execute_program(target['initial_values'], program) == False:  # False: in case an execution error occured
             print('Failed executing program')
             ok = False
             break
 
-        if p.get_accumulator() != target['result_acc']:
+        if proc.get_accumulator() != target['result_acc']:
             ok = False
 
         else:
@@ -37,28 +50,35 @@ def test_program(p, targets: list[dict], program: list[dict]):
 
     return (ok, n_targets_ok)
 
-max_program_iterations = None
-max_program_length     = 256
-
-def search(in_q: multiprocessing.Queue, out_q: multiprocessing.Queue) -> None:
+def search(stop_q: multiprocessing.Queue, out_q: multiprocessing.Queue) -> None:
     random.seed()
 
     best_length = max_program_length + 1
 
-    iterations = 0
+    iterations   = 0
+    n_targets_ok = 0
 
-    p = processor_z80()
+    proc = processor_z80()
 
-    while max_program_iterations == None or iterations < max_program_iterations:
+    while max_program_iterations is None or iterations < max_program_iterations:
+        try:
+            if stop_q.get_nowait() == 'stop':
+                break
+
+            break
+
+        except Exception as e:
+            pass
+
+        # search for a program
         iterations += 1
 
-        program = p.generate_program(max_program_length)
+        program = proc.generate_program(max_program_length)
 
-        if program == None:
-            continue
-
-        rc = test_program(p, targets, program)
+        rc = test_program(proc, targets, program)
         ok = rc[0]
+
+        n_targets_ok += rc[1]
 
         if ok:
             len_ = len(program)
@@ -66,22 +86,56 @@ def search(in_q: multiprocessing.Queue, out_q: multiprocessing.Queue) -> None:
             if len_ < best_length:
                 best_length = len_
 
-                out_q.put((program, rc[1], iterations, True))
+                out_q.put((program, n_targets_ok, iterations, True))
 
-                iterations = 0
+                iterations   = 0
+                n_targets_ok = 0
 
-        elif iterations >= 1000:
-            out_q.put((None, None, iterations, False))
+        elif iterations >= 100:
+            out_q.put((None, n_targets_ok, iterations, False))
 
-            iterations = 0
+            iterations   = 0
+            n_targets_ok = 0
 
-        try:
-            in_q.get_nowait()
+        # see if it can be enhanced to make into something that
+        # does work
+        if not ok and rc[1] > 0:
+            for mi in range(0, max_modify_iterations):
+                work = copy.deepcopy(program)
 
-            break
+                operations_n = random.randint(1, max_modifications_per_run)
 
-        except Exception as e:
-            pass
+                for mri in range(0, operations_n):
+                    if len(work) < 2:
+                        break
+
+                    idx = random.randint(0, len(work) - 1)
+
+                    action = random.choice([0, 1, 2, 3])
+
+                    if action == 0:  # replace
+                        work[idx] = proc.pick_an_instruction()
+
+                    elif action == 1:  # insert
+                        work.insert(idx, proc.pick_an_instruction())
+
+                    elif action == 2:  # delete
+                        del work[idx]
+
+                    elif action == 3:  # append
+                        work.append(proc.pick_an_instruction())
+
+                    else:
+                        assert False
+
+                modify_rc = test_program(proc, targets, work)
+                if modify_rc[0] or modify_rc[1] > rc[1]:  # finished or improved?
+                    program = work
+
+                    if modify_rc[0]:  # finished?
+                        out_q.put((program, modify_rc[1], iterations, True))
+
+                        break
 
     out_q.put(None)
 
@@ -93,7 +147,7 @@ prev_ts  = start_ts
 
 processes = []
 
-for tnr in range(0, 32):
+for tnr in range(0, n_processes):
     proces = multiprocessing.Process(target=search, args=(stop_q, data_q,))
     proces.start()
 
@@ -105,30 +159,23 @@ best_program    = None
 best_iterations = None
 first_output    = True
 
-targets_ok_stat  = 0
 targets_ok_n     = 0
-targets_ok_bestn = 0
-targets_ok_best  = None
 
 while True:
     result = data_q.get()
-    
-    if result == None:
+
+    if result is None:
         break
 
     iterations += result[2]
 
+    if result[1] is not None:
+        targets_ok_n += result[1]
+
     if result[3] == True:
         program = result[0]
 
-        targets_ok_stat += result[1]
-        targets_ok_n    += 1
-
-        if result[1] > targets_ok_bestn:
-            targets_ok_bestn = result[1]
-            targets_ok_best  = program
-
-        if ok and (best_program == None or len(program) < len(best_program)):
+        if ok and (best_program is None or len(program) < len(best_program)):
             best_program    = program
 
             best_iterations = iterations
@@ -139,7 +186,7 @@ while True:
                 print()
                 print(f'First output after {iterations} iterations ({time.time() - start_ts:.2f} seconds)')
 
-            if max_program_iterations == None:
+            if max_program_iterations is None:
                 break
 
     now = time.time()
@@ -149,23 +196,20 @@ while True:
 
         diff_ts = now - start_ts
 
-        if targets_ok_n > 0:
-            print(f'Iterations done: {iterations}, average n_ok: {targets_ok_stat / targets_ok_n:.4f}[{targets_ok_bestn}], run time: {now - start_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second\r', end='')
-
-        else:
-            print(f'Iterations done: {iterations}, run time: {now - start_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second\r', end='')
+        print(f'Iterations done: {iterations}, average n_ok: {targets_ok_n / iterations:.4f}[{targets_ok_n}], run time: {now - start_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second\r', end='')
 
 for proces in processes:
-    stop_q.push('stop')
+    stop_q.put('stop')
 
+for proces in processes:
     proces.join()
 
 n_deleted     = 0
 
-if best_program != None:
-    idx = 0
+p = processor_z80()
 
-    p = processor_z80()
+if best_program is not None:
+    idx = 0
 
     while idx < len(best_program):
         work = copy.deepcopy(best_program)
@@ -183,13 +227,14 @@ if best_program != None:
         else:
             idx += 1
 
-best_program = p.get_program_init(targets[0]['initial_values']) + best_program
+if best_program is not None:
+    best_program = p.get_program_init(targets[0]['initial_values']) + best_program
 
 end_ts = time.time()
 
 print()
 
-if best_program != None:
+if best_program is not None:
     diff_ts = end_ts - start_ts
 
     print(f'Iterations: {best_iterations}, length program: {len(best_program)}, took: {diff_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second, # deleted: {n_deleted}')
