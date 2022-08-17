@@ -7,6 +7,9 @@ import random
 import time
 
 targets  = [
+            { 'initial_values': [ { 'width' : 8, 'value' : 0 },
+                                  { 'width' : 8, 'value' : 0 } ],
+              'result_acc': 0 },
             { 'initial_values': [ { 'width' : 8, 'value' : 1 },
                                   { 'width' : 8, 'value' : 1 } ],
               'result_acc': 2 },
@@ -80,6 +83,7 @@ def search(in_q, out_q):
         if not ok and rc[1] > 0:
             # combine with new & shuffle then try that
             # TODO
+            pass
 
         try:
             if in_q.get_nowait() == 'stop':
