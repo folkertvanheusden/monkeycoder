@@ -23,8 +23,9 @@ targets  = [
 
 max_program_iterations = None
 max_program_length     = 256
+max_modify_iterations  = 100
 
-n_processes = 31
+n_processes = 3
 
 def test_program(p, targets, program):
     ok = True
@@ -45,7 +46,7 @@ def test_program(p, targets, program):
 
     return (ok, n_targets_ok)
 
-def search(in_q, out_q):
+def search(stop_q, out_q):
     random.seed()
 
     best_length = max_program_length + 1
@@ -56,6 +57,16 @@ def search(in_q, out_q):
     p = processor_z80()
 
     while max_program_iterations == None or iterations < max_program_iterations:
+        try:
+            if stop_q.get_nowait() == 'stop':
+                break
+
+            break
+
+        except Exception as e:
+            pass
+
+        # search for a program
         iterations += 1
 
         program = p.generate_program(max_program_length)
@@ -82,19 +93,47 @@ def search(in_q, out_q):
             iterations   = 0
             n_targets_ok = 0
 
+        # see if it can be enhanced to make into something that
+        # does work
         if not ok and rc[1] > 0:
-            # combine with new & shuffle then try that
-            # TODO
-            pass
+            for mi in range(0, max_modify_iterations):
+                work = copy.deepcopy(program)
 
-        try:
-            if in_q.get_nowait() == 'stop':
-                break
+                if len(work) < 2:
+                    break
 
-            break
+                replace_n = random.randint(1, len(work))
 
-        except Exception as e:
-            pass
+                for mri in range(0, replace_n):
+                    idx = random.randint(0, len(work) - 1)
+
+                    action = random.choice([0, 1, 2])
+
+                    if action == 0:  # replace
+                        work[idx] = p.pick_an_instruction()
+
+                    elif action == 1:  # insert
+                        work.insert(idx, p.pick_an_instruction())
+
+                    elif action == 2:  # delete
+                        del work[idx]
+
+                    else:
+                        assert False
+
+                modify_rc = test_program(p, targets, work)
+                if modify_rc[0] or modify_rc[1] > rc[1]:  # finished or improved?
+
+                    if modify_rc[1] >= 3:
+                        print()
+                        print(mi, rc, '=>', modify_rc)
+
+                    program = work
+
+                    if modify_rc[0]:  # finished?
+                        out_q.put((program, modify_rc[1], iterations, True))
+
+                        break
 
     out_q.put(None)
 
