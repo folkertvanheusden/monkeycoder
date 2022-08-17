@@ -1,6 +1,7 @@
 #! /usr/bin/python3
 
 import copy
+from processor import processor
 from processor_z80 import processor_z80
 import multiprocessing
 import random
@@ -23,6 +24,11 @@ targets  = [
                                   { 'width' : 8, 'value' : 8 } ],
               'result_acc': 7 },
     ]
+
+def instantiate_processor_z80():
+    return processor_z80()
+
+instantiate_processor_obj = instantiate_processor_z80
 
 max_program_iterations    = None
 max_program_length        = 128
@@ -50,7 +56,7 @@ def test_program(proc, targets: list[dict], program: list[dict]):
 
     return (ok, n_targets_ok)
 
-def search(stop_q: multiprocessing.Queue, out_q: multiprocessing.Queue) -> None:
+def search(stop_q: multiprocessing.Queue, out_q: multiprocessing.Queue, instantiate_processor) -> None:
     random.seed()
 
     best_length = max_program_length + 1
@@ -58,7 +64,7 @@ def search(stop_q: multiprocessing.Queue, out_q: multiprocessing.Queue) -> None:
     iterations   = 0
     n_targets_ok = 0
 
-    proc = processor_z80()
+    proc = instantiate_processor()
 
     while max_program_iterations is None or iterations < max_program_iterations:
         try:
@@ -148,7 +154,7 @@ prev_ts  = start_ts
 processes = []
 
 for tnr in range(0, n_processes):
-    proces = multiprocessing.Process(target=search, args=(stop_q, data_q,))
+    proces = multiprocessing.Process(target=search, args=(stop_q, data_q, instantiate_processor_obj))
     proces.start()
 
     processes.append(proces)
@@ -206,7 +212,7 @@ for proces in processes:
 
 n_deleted     = 0
 
-p = processor_z80()
+p = instantiate_processor_obj()
 
 if best_program is not None:
     idx = 0
