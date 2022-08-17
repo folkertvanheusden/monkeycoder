@@ -5,13 +5,13 @@ import time
 
 targets  = [
             { 'initial_values': [ { 'width' : 8, 'value' : 1 },
-                                  { 'width' : 8, 'value' : 1   } ],
+                                  { 'width' : 8, 'value' : 1 } ],
               'result_acc': 2 },
             { 'initial_values': [ { 'width' : 8, 'value' : 2 },
-                                  { 'width' : 8, 'value' : 1   } ],
+                                  { 'width' : 8, 'value' : 1 } ],
               'result_acc': 3 },
             { 'initial_values': [ { 'width' : 8, 'value' : 1 },
-                                  { 'width' : 8, 'value' : 2   } ],
+                                  { 'width' : 8, 'value' : 2 } ],
               'result_acc': 3 },
     ]
 
@@ -21,10 +21,14 @@ max_program_length     = 1024
 iterations = 0
 
 start_ts   = time.time()
+prev_ts    = start_ts
 
 best_program    = None
 best_iterations = None
 first_output    = True
+
+targets_ok_stat = 0
+targets_ok_n    = 0
 
 while iterations < max_program_iterations:
     ok = True
@@ -37,6 +41,8 @@ while iterations < max_program_iterations:
     if program == None:
         continue
 
+    n_targets_ok = 0
+
     for target in targets:
         if p.execute_program(target['initial_values'], program) == False:  # False: in case an execution error occured
             print('Failed executing program')
@@ -47,6 +53,11 @@ while iterations < max_program_iterations:
             ok = False
             break
 
+        n_targets_ok += 1
+
+    targets_ok_stat += n_targets_ok
+    targets_ok_n    += 1
+
     if ok and (best_program == None or len(program) < len(best_program)):
         best_program    = program
         p.insert_program_init(best_program, target['initial_values'])
@@ -56,11 +67,21 @@ while iterations < max_program_iterations:
         if first_output:
             first_output = False
 
+            print()
             print(f'First output after {iterations} iterations ({time.time() - start_ts:.2f} seconds)')
+
+    now = time.time()
+
+    if now - prev_ts >= 2:
+        prev_ts = now
+
+        print(f'Iterations done: {iterations}, average n_ok: {targets_ok_stat / targets_ok_n:.4f}, run time: {now - start_ts:.2f} seconds\r', end='')
 
 # TODO: remove random instructions and check if it still works
 
 end_ts = time.time()
+
+print()
 
 if best_program != None:
     diff_ts = end_ts - start_ts
