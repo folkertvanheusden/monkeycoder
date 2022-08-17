@@ -22,10 +22,10 @@ targets  = [
     ]
 
 max_program_iterations = None
-max_program_length     = 256
-max_modify_iterations  = 100
+max_program_length     = 128
+max_modify_iterations  = 2048
 
-n_processes = 3
+n_processes = 31
 
 def test_program(p, targets, program):
     ok = True
@@ -87,7 +87,7 @@ def search(stop_q, out_q):
                 iterations   = 0
                 n_targets_ok = 0
 
-        elif iterations >= 1000:
+        elif iterations >= 100:
             out_q.put((None, n_targets_ok, iterations, False))
 
             iterations   = 0
@@ -107,7 +107,7 @@ def search(stop_q, out_q):
                 for mri in range(0, replace_n):
                     idx = random.randint(0, len(work) - 1)
 
-                    action = random.choice([0, 1, 2])
+                    action = random.choice([0, 1, 2, 3])
 
                     if action == 0:  # replace
                         work[idx] = p.pick_an_instruction()
@@ -117,6 +117,9 @@ def search(stop_q, out_q):
 
                     elif action == 2:  # delete
                         del work[idx]
+
+                    elif action == 3:  # append
+                        work.append(p.pick_an_instruction())
 
                     else:
                         assert False
