@@ -117,7 +117,7 @@ class processor:
 
         for instruction in program:
             if instruction['instruction'] in [ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or ]:
-                work_value = 0
+                work_value = None
 
                 for source in instruction['sources']:
                     cur_value = None
