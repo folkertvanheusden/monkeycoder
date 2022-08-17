@@ -26,8 +26,8 @@ targets  = [
 
 max_program_iterations    = None
 max_program_length        = 128
-max_modify_iterations     = 128
-max_modifications_per_run = 128
+max_modify_iterations     = 16
+max_modifications_per_run = 16
 
 n_processes = 31
 
@@ -130,11 +130,6 @@ def search(stop_q, out_q):
 
                 modify_rc = test_program(proc, targets, work)
                 if modify_rc[0] or modify_rc[1] > rc[1]:  # finished or improved?
-
-                    if modify_rc[1] >= 3:
-                        print()
-                        print(mi, rc, '=>', modify_rc)
-
                     program = work
 
                     if modify_rc[0]:  # finished?
