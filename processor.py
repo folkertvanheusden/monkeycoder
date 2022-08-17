@@ -3,12 +3,14 @@ import random
 
 class processor:
     class Instruction(Enum):
-        i_add  = 1
-        i_sub  = 2
-        i_xor  = 3
-        i_and  = 4
-        i_or   = 5
-        i_load = 6
+        i_add        = 1
+        i_sub        = 2
+        i_xor        = 3
+        i_and        = 4
+        i_or         = 5
+        i_load       = 6
+        i_shift_r    = 8
+        i_rot_circ_r = 9
 
     class SourceType(Enum):
         st_reg = 1
@@ -17,6 +19,8 @@ class processor:
 
     class DestinationType(Enum):
         dt_reg = 1
+
+    masks = { 8: 255, 16: 65535 }
 
     def __init__(self):
         pass
@@ -181,6 +185,37 @@ class processor:
 
                 else:
                     assert False
+
+            elif instruction['instruction'] == processor.Instruction.i_shift_r:
+                work_value = self.get_register_value(instruction['destination']['name'])
+
+                work_value >>= instruction['shift_n']
+
+                self.set_register_value(instruction['destination']['name'], work_value)
+
+            elif instruction['instruction'] == processor.Instruction.i_rot_circ_r:
+                work_value = self.get_register_value(instruction['destination']['name'])
+
+                old_0 = work_value & 1
+
+                work_value >>= instruction['shift_n']
+
+                work_value |= old_0 << (self.registers[instruction['destination']['name']]['width'] - 1)
+
+                self.set_register_value(instruction['destination']['name'], work_value)
+
+            elif instruction['instruction'] == processor.Instruction.i_rot_circ_l:
+                work_value = self.get_register_value(instruction['destination']['name'])
+
+                old_7 = 1 if work_value & 128 else 0
+
+                work_value <<= instruction['shift_n']
+
+                work_value &= processor.masks[self.registers[instruction['destination']['name']]['width']]
+
+                work_value |= old_7
+
+                self.set_register_value(instruction['destination']['name'], work_value)
 
             else:
                 assert False

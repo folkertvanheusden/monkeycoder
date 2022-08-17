@@ -5,24 +5,17 @@ from processor_z80 import processor_z80
 import random
 import time
 
-if 0:
-    targets  = [
-                { 'initial_values': [ { 'width' : 8, 'value' : 1 },
-                                      { 'width' : 8, 'value' : 1 } ],
-                  'result_acc': 2 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 32 },
-                                      { 'width' : 8, 'value' : 16 } ],
-                  'result_acc': 48 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 16 },
-                                      { 'width' : 8, 'value' : 32 } ],
-                  'result_acc': 48 },
-        ]
-
 targets  = [
-            { 'initial_values': [ { 'width' : 8, 'value' : 3 },
-                                  { 'width' : 8, 'value' : 3 } ],
-              'result_acc': 6 }
-            ]
+            { 'initial_values': [ { 'width' : 8, 'value' : 1 },
+                                  { 'width' : 8, 'value' : 1 } ],
+              'result_acc': 2 },
+            { 'initial_values': [ { 'width' : 8, 'value' : 32 },
+                                  { 'width' : 8, 'value' : 16 } ],
+              'result_acc': 48 },
+           { 'initial_values': [ { 'width' : 8, 'value' : 16 },
+                                  { 'width' : 8, 'value' : 32 } ],
+              'result_acc': 48 },
+    ]
 
 def test_program(p, targets, program):
     ok = True

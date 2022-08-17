@@ -8,11 +8,14 @@ class processor_z80(processor):
         self.init_registers()
 
         self.instr_mapping = dict()
-        self.instr_mapping[processor.Instruction.i_add] = 'ADD'
-        self.instr_mapping[processor.Instruction.i_sub] = 'SUB'
-        self.instr_mapping[processor.Instruction.i_xor] = 'XOR'
-        self.instr_mapping[processor.Instruction.i_and] = 'AND'
-        self.instr_mapping[processor.Instruction.i_or ] = 'OR'
+        self.instr_mapping[processor.Instruction.i_add       ] = 'ADD'
+        self.instr_mapping[processor.Instruction.i_sub       ] = 'SUB'
+        self.instr_mapping[processor.Instruction.i_xor       ] = 'XOR'
+        self.instr_mapping[processor.Instruction.i_and       ] = 'AND'
+        self.instr_mapping[processor.Instruction.i_or        ] = 'OR'
+        self.instr_mapping[processor.Instruction.i_load      ] = 'LD'
+        self.instr_mapping[processor.Instruction.i_shift_r   ] = 'SRL'
+        self.instr_mapping[processor.Instruction.i_rot_circ_r] = 'RRC'
 
         super().__init__()
 
@@ -56,7 +59,7 @@ class processor_z80(processor):
         return instructions
 
     def pick_an_instruction(self):
-        instr_type = random.randint(0, 1)
+        instr_type = random.randint(0, 2)
 
         instruction = dict()
 
@@ -100,6 +103,27 @@ class processor_z80(processor):
                 v = random.randint(0, 255)
                 instruction['sources'] = [ { 'type': processor.SourceType.st_val, 'value': v } ]
                 instruction['opcode'] = f"LD {instruction['destination']['name']}, {v}"
+
+        elif instr_type == 2:
+            if random.choice([False, True]):
+                instruction['instruction'] = processor.Instruction.i_shift_r
+                instruction['shift_n']     = 1  # Z80 can only shift 1 bit at a time
+
+                instruction['destination'] = dict()
+                instruction['destination']['type'] = processor.DestinationType.dt_reg
+                instruction['destination']['name'] = self.pick_a_register(8, True)
+
+                instruction['opcode'] = f"SRL {instruction['destination']['name']}"
+
+            else:
+                instruction['instruction'] = processor.Instruction.i_rot_circ_r
+                instruction['shift_n']     = 1  # Z80 can only shift 1 bit at a time
+
+                instruction['destination'] = dict()
+                instruction['destination']['type'] = processor.DestinationType.dt_reg
+                instruction['destination']['name'] = self.pick_a_register(8, True)
+
+                instruction['opcode'] = f"RRC {instruction['destination']['name']}"
 
         else:
             assert False
