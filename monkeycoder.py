@@ -77,6 +77,10 @@ def search(in_q, out_q):
 
             iterations = 0
 
+        if not ok and rc[1] > 0:
+            # combine with new & shuffle then try that
+            # TODO
+
         try:
             if in_q.get_nowait() == 'stop':
                 break
