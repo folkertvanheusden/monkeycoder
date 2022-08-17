@@ -89,8 +89,8 @@ class processor:
             value = 0
 
             for dest in self.registers[reg_name]['pair']:
-                value |= self.registers[dest]['value']
                 value <<= 8
+                value |= self.registers[dest]['value']
 
             return value
 
@@ -103,11 +103,18 @@ class processor:
         is_pair = 'pair' in self.registers[reg_name]
 
         if is_pair:
+            assert value >= 0
+
             for dest in reversed(self.registers[reg_name]['pair']):
                 self.registers[dest]['value'] = value & 255
                 value >>= 8
 
+            assert value == 0
+
         else:
+            assert value >= 0
+            assert value < 256
+
             self.registers[reg_name]['value'] = value
 
     def execute_program(self, initial_values, program):
@@ -153,6 +160,10 @@ class processor:
                         assert False
 
                 if instruction['destination']['type'] == processor.DestinationType.dt_reg:
+                    mask = processor.masks[self.registers[instruction['destination']['name']]['width']]
+
+                    work_value &= mask
+
                     self.set_register_value(instruction['destination']['name'], work_value)
 
                 else:
