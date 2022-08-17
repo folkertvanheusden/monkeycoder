@@ -29,8 +29,10 @@ class processor_z80(processor):
         self.registers['BC'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set': False, 'pair': ['B', 'C'], 'dest_allowed': False }
         self.registers['DE'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set': False, 'pair': ['D', 'E'], 'dest_allowed': False }
 
-    def insert_program_init(self, dest, initial_values):
+    def get_program_init(self, initial_values):
         self.reset_registers(initial_values)
+
+        instructions = []
 
         for register in self.registers:
             is_pair = 'pair' in self.registers[register]
@@ -49,7 +51,9 @@ class processor_z80(processor):
             instruction['destination']['name'] = register
             instruction['opcode'] = f"LD {instruction['destination']['name']}, {v}"
 
-            dest.insert(0, instruction)
+            instructions.append(instruction)
+
+        return instructions
 
     def pick_an_instruction(self):
         instr_type = random.randint(0, 1)

@@ -1,5 +1,6 @@
 #! /usr/bin/python3
 
+import copy
 from processor_z80 import processor_z80
 import random
 import time
@@ -20,7 +21,7 @@ if 0:
 targets  = [
             { 'initial_values': [ { 'width' : 8, 'value' : 3 },
                                   { 'width' : 8, 'value' : 3 } ],
-              'result_acc': 9 }
+              'result_acc': 6 }
             ]
 
 def test_program(p, targets, program):
@@ -36,16 +37,14 @@ def test_program(p, targets, program):
 
         if p.get_accumulator() != target['result_acc']:
             ok = False
-            break
 
-        n_targets_ok += 1
+        else:
+            n_targets_ok += 1
 
     return (ok, n_targets_ok)
 
 max_program_iterations = None
 max_program_length     = 256
-
-max_delete_fail_count  = 8
 
 iterations = 0
 
@@ -106,13 +105,13 @@ while max_program_iterations == None or iterations < max_program_iterations:
         print(f'Iterations done: {iterations}, average n_ok: {targets_ok_stat / targets_ok_n:.4f}[{targets_ok_bestn}], run time: {now - start_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second\r', end='')
 
 n_deleted     = 0
-n_not_deleted = 0
 
 if best_program != None:
-    while len(best_program) > 0:
-        work = best_program
+    idx = 0
 
-        idx  = random.randint(0, len(work) - 1)
+    while idx < len(best_program):
+        work = copy.deepcopy(best_program)
+
         del work[idx]
 
         rc = test_program(p, targets, work)
@@ -123,15 +122,10 @@ if best_program != None:
 
             n_deleted += 1
 
-            n_not_deleted = 0
-
         else:
-            n_not_deleted += 1
+            idx += 1
 
-            if n_not_deleted > max_delete_fail_count:
-                break
-
-p.insert_program_init(best_program, targets[0]['initial_values'])
+best_program = p.get_program_init(targets[0]['initial_values']) + best_program
 
 end_ts = time.time()
 
