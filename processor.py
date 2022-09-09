@@ -1,6 +1,8 @@
 from enum import Enum
-import random
-from typing import Callable, List, Optional, Tuple
+from random import SystemRandom
+from typing import Callable, List, Optional, Tuple, TypedDict
+
+rng = SystemRandom()
 
 class processor:
     class Instruction(Enum):
@@ -21,10 +23,17 @@ class processor:
     class DestinationType(Enum):
         dt_reg = 1
 
+    class registers_dict(TypedDict):
+        width : int
+        value : int
+        ivalue: int
+        name  : str
+        set_  : bool
+
     masks = { 8: 255, 16: 65535 }
 
     def __init__(self) -> None:
-        self.registers: dict = {}
+        self.registers: processor.registers_dict = { }
         self.ram_size: int   = 0
 
     # allocate them
@@ -39,11 +48,11 @@ class processor:
             reg_found: bool = False
 
             for r in self.registers:
-                if self.registers[r]['width'] == iv['width'] and self.registers[r]['set'] == False:
+                if self.registers[r]['width'] == iv['width'] and self.registers[r]['set_'] == False:
                     self.registers[r]['value']  = iv['value']
                     self.registers[r]['ivalue'] = iv['value']
 
-                    self.registers[r]['set']    = True
+                    self.registers[r]['set_']    = True
 
                     reg_found = True
                     break
@@ -51,7 +60,7 @@ class processor:
             assert reg_found == True
 
     def generate_program(self, max_length: int) -> list[dict]:
-        instruction_count: int = random.randint(1, max_length)
+        instruction_count: int = rng.randint(1, max_length)
 
         program: list[dict] = []
 
@@ -62,7 +71,7 @@ class processor:
 
     def pick_a_register(self, width: int, can_be_destination: Optional[bool]) -> dict:
         while True:
-            register = random.choice(list(self.registers))
+            register = rng.choice(list(self.registers))
 
             if self.registers[register]['width'] == width or width == None:
                 if can_be_destination == True:
@@ -79,7 +88,8 @@ class processor:
         assert False
 
     def reset_ram(self) -> None:
-        self.ram = [ 0 ] * self.ram_size
+        # self.ram = [ 0 ] * self.ram_size  TODO
+        pass
 
     def get_accumulator(self) -> int:
         assert False
@@ -92,6 +102,8 @@ class processor:
 
             for dest in self.registers[reg_name]['pair']:
                 cur_byte = self.registers[dest]['value']
+
+                assert cur_byte != None
                 assert cur_byte >= 0
                 assert cur_byte < 256
 
@@ -103,6 +115,7 @@ class processor:
         else:
             cur_byte = self.registers[reg_name]['value']
 
+            assert cur_byte != None
             assert cur_byte >= 0
             assert cur_byte < 256
 
@@ -135,7 +148,7 @@ class processor:
 
         for instruction in program:
             if instruction['instruction'] in [ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or ]:
-                work_value: int = -1
+                work_value:  int  = -1
                 first_value: bool = True
 
                 for source in instruction['sources']:
@@ -149,6 +162,9 @@ class processor:
 
                     else:
                         assert False
+
+                    assert cur_value != None
+                    assert cur_value >= 0
 
                     if first_value == True:
                         first_value = False
@@ -172,6 +188,8 @@ class processor:
 
                     else:
                         assert False
+
+                assert first_value == False
 
                 if instruction['destination']['type'] == processor.DestinationType.dt_reg:
                     mask = processor.masks[self.registers[instruction['destination']['name']]['width']]
@@ -218,11 +236,14 @@ class processor:
 
                 work_value = self.get_register_value(register)
 
-                old_0 = work_value & 1
+                bit_shift_n = self.registers[register]['width'] - 1
 
-                work_value >>= instruction['shift_n']
+                for i in range(0, instruction['shift_n']):
+                    old_0 = work_value & 1
 
-                work_value |= old_0 << (self.registers[register]['width'] - 1)
+                    work_value >>= 1
+
+                    work_value |= old_0 << bit_shift_n
 
                 self.set_register_value(register, work_value)
 
@@ -231,13 +252,16 @@ class processor:
 
                 work_value = self.get_register_value(register)
 
-                old_7 = 1 if work_value & 128 else 0
+                mask = processor.masks[self.registers[register]['width']]
 
-                work_value <<= instruction['shift_n']
+                for i in range(0, instruction['shift_n']):
+                    old_7 = 1 if work_value & 128 else 0
 
-                work_value &= processor.masks[self.registers[register]['width']]
+                    work_value <<= 1
 
-                work_value |= old_7
+                    work_value &= mask
+
+                    work_value |= old_7
 
                 self.set_register_value(register, work_value)
 

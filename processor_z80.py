@@ -1,6 +1,8 @@
 from processor import processor
-import random
+from random import SystemRandom
 from typing import List
+
+rng = SystemRandom()
 
 class processor_z80(processor):
     def __init__(self):
@@ -22,16 +24,16 @@ class processor_z80(processor):
 
     def init_registers(self) -> None:
         self.registers: dict = {}
-        self.registers['A'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
-        self.registers['B'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
-        self.registers['C'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
-        self.registers['D'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
-        self.registers['E'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
-        self.registers['H'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
-        self.registers['L'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
-        self.registers['HL'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set': False, 'pair': ['H', 'L'], 'dest_allowed': True }
-        self.registers['BC'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set': False, 'pair': ['B', 'C'], 'dest_allowed': False }
-        self.registers['DE'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set': False, 'pair': ['D', 'E'], 'dest_allowed': False }
+        self.registers['A'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
+        self.registers['B'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
+        self.registers['C'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
+        self.registers['D'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
+        self.registers['E'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
+        self.registers['H'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
+        self.registers['L'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
+        self.registers['HL'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set_': False, 'pair': ['H', 'L'], 'dest_allowed': True }
+        self.registers['BC'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set_': False, 'pair': ['B', 'C'], 'dest_allowed': False }
+        self.registers['DE'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set_': False, 'pair': ['D', 'E'], 'dest_allowed': False }
 
     def get_program_init(self, initial_values: dict) -> List[dict]:
         self.reset_registers(initial_values)
@@ -60,18 +62,18 @@ class processor_z80(processor):
         return instructions
 
     def pick_an_instruction(self) -> dict:
-        instr_type = random.randint(0, 2)
+        instr_type = rng.randint(0, 2)
 
         instruction: dict = {}
 
         if instr_type == 0:
-            sub_type = random.choice([ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or ])
+            sub_type = rng.choice([ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or ])
 
             instruction['instruction'] = sub_type
 
-            width = random.choice([8, 16]) if sub_type == processor.Instruction.i_add else 8
+            width = rng.choice([8, 16]) if sub_type == processor.Instruction.i_add else 8
 
-            source = { 'type': processor.SourceType.st_reg, 'name': self.pick_a_register(width, None) } if random.choice([True, False]) or width == 16 else { 'type': processor.SourceType.st_val, 'value': random.randint(0, 255) }
+            source = { 'type': processor.SourceType.st_reg, 'name': self.pick_a_register(width, None) } if rng.choice([True, False]) or width == 16 else { 'type': processor.SourceType.st_val, 'value': rng.randint(0, 255) }
             instruction['sources']     = [ source ]
 
             instruction['destination'] = {}
@@ -94,19 +96,19 @@ class processor_z80(processor):
             instruction['destination']['type'] = processor.DestinationType.dt_reg
             instruction['destination']['name'] = self.pick_a_register(8, True)
 
-            if random.randint(0, 1) == 0:
+            if rng.randint(0, 1) == 0:
                 register = self.pick_a_register(8, True)
 
                 instruction['sources'] = [ { 'type': processor.SourceType.st_reg, 'name': register } ]
                 instruction['opcode'] = f"LD {instruction['destination']['name']}, {register}"
 
             else:
-                v = random.randint(0, 255)
+                v = rng.randint(0, 255)
                 instruction['sources'] = [ { 'type': processor.SourceType.st_val, 'value': v } ]
                 instruction['opcode'] = f"LD {instruction['destination']['name']}, {v}"
 
         elif instr_type == 2:
-            if random.choice([False, True]):
+            if rng.choice([False, True]):
                 instruction['instruction'] = processor.Instruction.i_shift_r
                 instruction['shift_n']     = 1  # Z80 can only shift 1 bit at a time
 
