@@ -132,33 +132,33 @@ def search(stop_q: multiprocessing.Queue, out_q: multiprocessing.Queue, instanti
     out_q.put(None)
 
 if __name__ == "__main__":
-    targets  = [
-                { 'initial_values': [ { 'width' : 8, 'value' : 0 },
-                                      { 'width' : 8, 'value' : 0 } ],
-                  'result_acc': 0 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 1 },
-                                      { 'width' : 8, 'value' : 1 } ],
-                  'result_acc': 2 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 32 },
-                                      { 'width' : 8, 'value' : 16 } ],
-                  'result_acc': 48 },
-               { 'initial_values': [ { 'width' : 8, 'value' : 16 },
-                                      { 'width' : 8, 'value' : 32 } ],
-                  'result_acc': 48 },
-               { 'initial_values': [ { 'width' : 8, 'value' : 254 },
-                                      { 'width' : 8, 'value' : 8 } ],
-                  'result_acc': 6 },
-        ]
-
     # verify if monkeycoder works
     proc = instantiate_processor_test()
 
-    test = proc.gen_test_program()
+    test, targets = proc.gen_test_program()
 
     rc = test_program(proc, targets, test)
 
     assert rc[0]
     assert rc[1] == len(targets)
+
+    targets  = [
+                { 'initial_values': [ { 'width' : 8, 'value' : 0 },
+                                      { 'width' : 8, 'value' : 0 } ],
+                  'result_acc': 0 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 3 },
+                                      { 'width' : 8, 'value' : 1 } ],
+                  'result_acc': 3 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 1 },
+                                      { 'width' : 8, 'value' : 3 } ],
+                  'result_acc': 3 },
+               { 'initial_values': [ { 'width' : 8, 'value' : 3 },
+                                      { 'width' : 8, 'value' : 3 } ],
+                  'result_acc': 9 },
+               { 'initial_values': [ { 'width' : 8, 'value' : 8 },
+                                      { 'width' : 8, 'value' : 8 } ],
+                  'result_acc': 64 },
+        ]
 
     # do search
     stop_q = multiprocessing.Queue()

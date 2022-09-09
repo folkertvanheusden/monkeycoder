@@ -299,4 +299,22 @@ class processor:
 
         program.append(instruction)
 
-        return program
+        targets  = [
+                    { 'initial_values': [ { 'width' : 8, 'value' : 0 },
+                                          { 'width' : 8, 'value' : 0 } ],
+                      'result_acc': 0 },
+                    { 'initial_values': [ { 'width' : 8, 'value' : 1 },
+                                          { 'width' : 8, 'value' : 1 } ],
+                      'result_acc': 2 },
+                    { 'initial_values': [ { 'width' : 8, 'value' : 32 },
+                                          { 'width' : 8, 'value' : 16 } ],
+                      'result_acc': 48 },
+                   { 'initial_values': [ { 'width' : 8, 'value' : 16 },
+                                          { 'width' : 8, 'value' : 32 } ],
+                      'result_acc': 48 },
+                   { 'initial_values': [ { 'width' : 8, 'value' : 254 },
+                                          { 'width' : 8, 'value' : 8 } ],
+                      'result_acc': 6 },
+            ]
+
+        return (program, targets)
