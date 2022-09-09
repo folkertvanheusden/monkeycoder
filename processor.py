@@ -1,6 +1,8 @@
 from enum import Enum
-import random
+from random import SystemRandom
 from typing import Callable, List, Optional, Tuple, TypedDict
+
+rng = SystemRandom()
 
 class processor:
     class Instruction(Enum):
@@ -58,7 +60,7 @@ class processor:
             assert reg_found == True
 
     def generate_program(self, max_length: int) -> list[dict]:
-        instruction_count: int = random.randint(1, max_length)
+        instruction_count: int = rng.randint(1, max_length)
 
         program: list[dict] = []
 
@@ -69,7 +71,7 @@ class processor:
 
     def pick_a_register(self, width: int, can_be_destination: Optional[bool]) -> dict:
         while True:
-            register = random.choice(list(self.registers))
+            register = rng.choice(list(self.registers))
 
             if self.registers[register]['width'] == width or width == None:
                 if can_be_destination == True:

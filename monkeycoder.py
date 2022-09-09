@@ -4,7 +4,7 @@ import copy
 from processor import processor
 from processor_z80 import processor_z80
 import multiprocessing
-import random
+from random import SystemRandom
 import time
 
 targets  = [
@@ -24,6 +24,8 @@ targets  = [
                                   { 'width' : 8, 'value' : 8 } ],
               'result_acc': 7 },
     ]
+
+rng = SystemRandom()
 
 def instantiate_processor_z80():
     return processor_z80()
@@ -57,8 +59,6 @@ def test_program(proc, targets: list[dict], program: list[dict]):
     return (ok, n_targets_ok)
 
 def search(stop_q: multiprocessing.Queue, out_q: multiprocessing.Queue, instantiate_processor) -> None:
-    random.seed()
-
     best_length = max_program_length + 1
 
     iterations   = 0
@@ -109,15 +109,15 @@ def search(stop_q: multiprocessing.Queue, out_q: multiprocessing.Queue, instanti
             for mi in range(0, max_modify_iterations):
                 work = copy.deepcopy(program)
 
-                operations_n = random.randint(1, max_modifications_per_run)
+                operations_n = rng.randint(1, max_modifications_per_run)
 
                 for mri in range(0, operations_n):
                     if len(work) < 2:
                         break
 
-                    idx = random.randint(0, len(work) - 1)
+                    idx = rng.randint(0, len(work) - 1)
 
-                    action = random.choice([0, 1, 2, 3])
+                    action = rng.choice([0, 1, 2, 3])
 
                     if action == 0:  # replace
                         work[idx] = proc.pick_an_instruction()
