@@ -230,11 +230,14 @@ class processor:
 
                 work_value = self.get_register_value(register)
 
-                old_0 = work_value & 1
+                bit_shift_n = self.registers[register]['width'] - 1
 
-                work_value >>= instruction['shift_n']
+                for i in range(0, instruction['shift_n']):
+                    old_0 = work_value & 1
 
-                work_value |= old_0 << (self.registers[register]['width'] - 1)
+                    work_value >>= 1
+
+                    work_value |= old_0 << bit_shift_n
 
                 self.set_register_value(register, work_value)
 
@@ -243,13 +246,16 @@ class processor:
 
                 work_value = self.get_register_value(register)
 
-                old_7 = 1 if work_value & 128 else 0
+                mask = processor.masks[self.registers[register]['width']]
 
-                work_value <<= instruction['shift_n']
+                for i in range(0, instruction['shift_n']):
+                    old_7 = 1 if work_value & 128 else 0
 
-                work_value &= processor.masks[self.registers[register]['width']]
+                    work_value <<= 1
 
-                work_value |= old_7
+                    work_value &= mask
+
+                    work_value |= old_7
 
                 self.set_register_value(register, work_value)
 
