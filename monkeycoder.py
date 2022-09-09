@@ -192,7 +192,7 @@ if __name__ == "__main__":
         iterations += result[2]
 
         if result[1] is not None:
-            targets_ok_n += result[1]
+            targets_ok_n += result[1] / len(targets)
 
         if result[3] == True:
             program = result[0]
