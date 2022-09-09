@@ -3,6 +3,7 @@
 import copy
 from processor import processor
 from processor_z80 import processor_z80
+from processor_test import processor_test
 import multiprocessing
 from random import SystemRandom
 import time
@@ -11,6 +12,9 @@ rng = SystemRandom()
 
 def instantiate_processor_z80():
     return processor_z80()
+
+def instantiate_processor_test():
+    return processor_test()
 
 instantiate_processor_obj = instantiate_processor_z80
 
@@ -40,7 +44,7 @@ def test_program(proc, targets: list[dict], program: list[dict]):
 
     return (ok, n_targets_ok)
 
-def search(stop_q: multiprocessing.Queue, out_q: multiprocessing.Queue, instantiate_processor) -> None:
+def search(stop_q: multiprocessing.Queue, out_q: multiprocessing.Queue, instantiate_processor, targets) -> None:
     best_length = max_program_length + 1
 
     iterations   = 0
@@ -146,13 +150,15 @@ if __name__ == "__main__":
                   'result_acc': 48 },
                { 'initial_values': [ { 'width' : 8, 'value' : 254 },
                                       { 'width' : 8, 'value' : 8 } ],
-                  'result_acc': 7 },
+                  'result_acc': 6 },
         ]
 
     # verify if monkeycoder works
-    test_program = instantiate_processor_obj().gen_test_program()
+    proc = instantiate_processor_test()
 
-    rc = test_program(proc, targets, test_program)
+    test = proc.gen_test_program()
+
+    rc = test_program(proc, targets, test)
 
     assert rc[0]
     assert rc[1] == len(targets)
@@ -167,7 +173,7 @@ if __name__ == "__main__":
     processes = []
 
     for tnr in range(0, n_processes):
-        proces = multiprocessing.Process(target=search, args=(stop_q, data_q, instantiate_processor_obj))
+        proces = multiprocessing.Process(target=search, args=(stop_q, data_q, instantiate_processor_obj, targets))
         proces.start()
 
         processes.append(proces)
