@@ -20,7 +20,7 @@ def instantiate_processor_test():
 instantiate_processor_obj = instantiate_processor_z80
 
 max_program_iterations    = None
-max_program_length        = 128
+max_program_length        = 512
 max_modify_iterations     = 16
 max_modifications_per_run = 16
 
@@ -45,15 +45,16 @@ def test_program(proc, targets: List[dict], program: List[dict]):
 
     return (ok, n_targets_ok)
 
-def search(stop_q: multiprocessing.Queue, out_q: multiprocessing.Queue, instantiate_processor, targets) -> None:
+def search(stop_q: multiprocessing.Queue, out_q: multiprocessing.Queue, instantiate_processor, targets, max_program_iterations) -> None:
     best_length = max_program_length + 1
 
-    iterations   = 0
-    n_targets_ok = 0
+    stop_iterations = 0
+    iterations      = 0
+    n_targets_ok    = 0
 
     proc = instantiate_processor()
 
-    while max_program_iterations is None or iterations < max_program_iterations:
+    while max_program_iterations is None or stop_iterations < max_program_iterations:
         try:
             if stop_q.get_nowait() == 'stop':
                 break
@@ -63,9 +64,10 @@ def search(stop_q: multiprocessing.Queue, out_q: multiprocessing.Queue, instanti
         except Exception as e:
             pass
 
-        # search for a program
         iterations += 1
+        stop_iterations += 1
 
+        # search for a program
         program = proc.generate_program(max_program_length)
 
         rc = test_program(proc, targets, program)
@@ -171,7 +173,7 @@ if __name__ == "__main__":
     processes = []
 
     for tnr in range(0, n_processes):
-        proces = multiprocessing.Process(target=search, args=(stop_q, data_q, instantiate_processor_obj, targets))
+        proces = multiprocessing.Process(target=search, args=(stop_q, data_q, instantiate_processor_obj, targets, max_program_iterations))
         proces.start()
 
         processes.append(proces)
