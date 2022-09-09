@@ -1,6 +1,6 @@
 from enum import Enum
 import random
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple, TypedDict
 
 class processor:
     class Instruction(Enum):
@@ -21,10 +21,17 @@ class processor:
     class DestinationType(Enum):
         dt_reg = 1
 
+    class registers_dict(TypedDict):
+        width : int
+        value : int
+        ivalue: int
+        name  : str
+        set_  : bool
+
     masks = { 8: 255, 16: 65535 }
 
     def __init__(self) -> None:
-        self.registers: dict = {}
+        self.registers: processor.registers_dict = { }
         self.ram_size: int   = 0
 
     # allocate them
@@ -39,11 +46,11 @@ class processor:
             reg_found: bool = False
 
             for r in self.registers:
-                if self.registers[r]['width'] == iv['width'] and self.registers[r]['set'] == False:
+                if self.registers[r]['width'] == iv['width'] and self.registers[r]['set_'] == False:
                     self.registers[r]['value']  = iv['value']
                     self.registers[r]['ivalue'] = iv['value']
 
-                    self.registers[r]['set']    = True
+                    self.registers[r]['set_']    = True
 
                     reg_found = True
                     break
@@ -149,6 +156,9 @@ class processor:
 
                     else:
                         assert False
+
+                    assert cur_value != None
+                    assert cur_value >= 0
 
                     if first_value == True:
                         first_value = False

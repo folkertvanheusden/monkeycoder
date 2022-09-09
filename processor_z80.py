@@ -22,16 +22,16 @@ class processor_z80(processor):
 
     def init_registers(self) -> None:
         self.registers: dict = {}
-        self.registers['A'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
-        self.registers['B'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
-        self.registers['C'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
-        self.registers['D'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
-        self.registers['E'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
-        self.registers['H'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
-        self.registers['L'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set': False, 'dest_allowed': True }
-        self.registers['HL'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set': False, 'pair': ['H', 'L'], 'dest_allowed': True }
-        self.registers['BC'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set': False, 'pair': ['B', 'C'], 'dest_allowed': False }
-        self.registers['DE'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set': False, 'pair': ['D', 'E'], 'dest_allowed': False }
+        self.registers['A'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
+        self.registers['B'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
+        self.registers['C'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
+        self.registers['D'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
+        self.registers['E'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
+        self.registers['H'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
+        self.registers['L'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
+        self.registers['HL'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set_': False, 'pair': ['H', 'L'], 'dest_allowed': True }
+        self.registers['BC'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set_': False, 'pair': ['B', 'C'], 'dest_allowed': False }
+        self.registers['DE'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set_': False, 'pair': ['D', 'E'], 'dest_allowed': False }
 
     def get_program_init(self, initial_values: dict) -> List[dict]:
         self.reset_registers(initial_values)
