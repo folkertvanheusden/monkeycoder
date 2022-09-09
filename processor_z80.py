@@ -23,7 +23,7 @@ class processor_z80(processor):
         self.instr_mapping[processor.Instruction.i_rot_circ_r] = 'RRC'
 
     def init_registers(self) -> None:
-        self.registers: dict = {}
+        self.registers: processor.registers_dict = {}
         self.registers['A'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
         self.registers['B'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
         self.registers['C'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
