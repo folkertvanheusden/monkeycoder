@@ -47,19 +47,18 @@ class processor:
         for iv in initial_values:
             reg_found: bool = False
 
-            for attempt in range(0, 2):
-                for r in self.registers:
-                    if r == self.get_accumulator_name() and attempt == 0:
-                        continue
+            for r in self.registers:
+                if r == self.get_accumulator_name():  # TODO handle situations where the accumulator is required to be used because of number of available registers
+                    continue
 
-                    if self.registers[r]['width'] == iv['width'] and self.registers[r]['set_'] == False:
-                        self.registers[r]['value']  = iv['value']
-                        self.registers[r]['ivalue'] = iv['value']
+                if self.registers[r]['width'] == iv['width'] and self.registers[r]['set_'] == False:
+                    self.registers[r]['value']  = iv['value']
+                    self.registers[r]['ivalue'] = iv['value']
 
-                        self.registers[r]['set_']    = True
+                    self.registers[r]['set_']    = True
 
-                        reg_found = True
-                        break
+                    reg_found = True
+                    break
 
             assert reg_found == True
 
@@ -274,3 +273,30 @@ class processor:
 
             else:
                 assert False
+
+    def gen_test_program(self):
+        self.init_registers()
+
+        program = []
+
+        instruction: dict = {}
+        instruction['instruction'] = processor.Instruction.i_load
+        instruction['sources']     = [ { 'type': processor.SourceType.st_reg, 'name': 'B' } ]
+        instruction['destination'] = {}
+        instruction['destination']['type'] = processor.DestinationType.dt_reg
+        instruction['destination']['name'] = 'A'
+        instruction['opcode'] = f"LD {instruction['destination']['name']}, B"
+
+        program.append(instruction)
+
+        instruction: dict = {}
+        instruction['instruction'] = processor.Instruction.i_add
+        instruction['sources']     = [ { 'type': processor.SourceType.st_reg, 'name': 'A' }, { 'type': processor.SourceType.st_reg, 'name': 'C' } ]
+        instruction['destination'] = {}
+        instruction['destination']['type'] = processor.DestinationType.dt_reg
+        instruction['destination']['name'] = 'A'
+        instruction['opcode'] = f"ADD A, {instruction['sources'][0]['name']}"
+
+        program.append(instruction)
+
+        return program

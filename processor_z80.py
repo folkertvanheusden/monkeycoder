@@ -51,7 +51,7 @@ class processor_z80(processor):
 
             instruction: dict = {}
             instruction['instruction'] = processor.Instruction.i_load
-            instruction['sources']     = [ { 'type': processor.SourceType.st_val, 'value': 0 } ]
+            instruction['sources']     = [ { 'type': processor.SourceType.st_val, 'value': v } ]
             instruction['destination'] = {}
             instruction['destination']['type'] = processor.DestinationType.dt_reg
             instruction['destination']['name'] = register
@@ -73,18 +73,19 @@ class processor_z80(processor):
 
             width = rng.choice([8, 16]) if sub_type == processor.Instruction.i_add else 8
 
-            source = { 'type': processor.SourceType.st_reg, 'name': self.pick_a_register(width, None) } if rng.choice([True, False]) or width == 16 else { 'type': processor.SourceType.st_val, 'value': rng.randint(0, 255) }
-            instruction['sources']     = [ source ]
+            source1 = { 'type': processor.SourceType.st_reg, 'name': self.get_accumulator_name() }  # add a,b => a = a + b
+            source2 = { 'type': processor.SourceType.st_reg, 'name': self.pick_a_register(width, None) } if rng.choice([True, False]) or width == 16 else { 'type': processor.SourceType.st_val, 'value': rng.randint(0, 255) }
+            instruction['sources']     = [ source1, source2 ]
 
             instruction['destination'] = {}
             instruction['destination']['type'] = processor.DestinationType.dt_reg
             instruction['destination']['name'] = 'A' if width == 8 else 'HL'
 
-            if source['type'] == processor.SourceType.st_reg:
-                instruction['opcode'] = f"{self.instr_mapping[sub_type]} {instruction['destination']['name']}, {source['name']}"
+            if source2['type'] == processor.SourceType.st_reg:
+                instruction['opcode'] = f"{self.instr_mapping[sub_type]} {instruction['destination']['name']}, {source2['name']}"
             
-            elif source['type'] == processor.SourceType.st_val:
-                instruction['opcode'] = f"{self.instr_mapping[sub_type]} {instruction['destination']['name']}, ${source['value']:02X}"
+            elif source2['type'] == processor.SourceType.st_val:
+                instruction['opcode'] = f"{self.instr_mapping[sub_type]} {instruction['destination']['name']}, ${source2['value']:02X}"
 
             else:
                 assert False
