@@ -91,7 +91,7 @@ def search(stop_q: multiprocessing.Queue, out_q: multiprocessing.Queue, instanti
 
         # see if it can be enhanced to make into something that
         # does work
-        if False: #if not ok and rc[1] > 0:
+        if not ok and rc[1] > 0:
             for mi in range(0, max_modify_iterations):
                 work = copy.deepcopy(program)
 
