@@ -7,6 +7,7 @@ from processor_test import processor_test
 import multiprocessing
 from random import SystemRandom
 import time
+from typing import List
 
 rng = SystemRandom()
 
@@ -25,7 +26,7 @@ max_modifications_per_run = 16
 
 n_processes = 31
 
-def test_program(proc, targets: list[dict], program: list[dict]):
+def test_program(proc, targets: List[dict], program: List[dict]):
     ok = True
 
     n_targets_ok = 0

@@ -62,7 +62,7 @@ class processor:
 
             assert reg_found == True
 
-    def generate_program(self, max_length: int) -> list[dict]:
+    def generate_program(self, max_length: int) -> List[dict]:
         instruction_count: int = rng.randint(1, max_length)
 
         program: list[dict] = []
