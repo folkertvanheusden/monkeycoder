@@ -161,8 +161,8 @@ if __name__ == "__main__":
         ]
 
     # do search
-    stop_q = multiprocessing.Queue()
-    data_q = multiprocessing.Queue()
+    stop_q: multiprocessing.Queue = multiprocessing.Queue()
+    data_q: multiprocessing.Queue = multiprocessing.Queue()
 
     start_ts = time.time()
     prev_ts  = start_ts
