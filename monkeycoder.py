@@ -1,6 +1,5 @@
 #! /usr/bin/python3
 
-import copy
 from processor import processor
 from processor_z80 import processor_z80
 from processor_test import processor_test
@@ -25,6 +24,9 @@ max_modify_iterations     = 16
 max_modifications_per_run = 16
 
 n_processes = 31
+
+def copy_program(program: List[dict]) -> List[dict]:
+    return program[:]
 
 def test_program(proc, targets: List[dict], program: List[dict]):
     ok = True
@@ -96,7 +98,7 @@ def search(stop_q: multiprocessing.Queue, out_q: multiprocessing.Queue, instanti
         # does work
         if not ok and rc[1] > 0:
             for mi in range(0, max_modify_iterations):
-                work = copy.deepcopy(program)
+                work = copy_program(program)
 
                 operations_n = rng.randint(1, max_modifications_per_run)
 
@@ -237,7 +239,7 @@ if __name__ == "__main__":
         idx = 0
 
         while idx < len(best_program):
-            work = copy.deepcopy(best_program)
+            work = copy_program(best_program)
 
             work.pop(idx)
 
