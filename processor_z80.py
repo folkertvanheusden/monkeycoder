@@ -133,5 +133,5 @@ class processor_z80(processor):
 
         return instruction
 
-    def get_accumulator(self) -> int:
-        return self.get_register_value('A')
+    def get_accumulator_name(self) -> str:
+        return 'A'

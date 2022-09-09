@@ -47,15 +47,19 @@ class processor:
         for iv in initial_values:
             reg_found: bool = False
 
-            for r in self.registers:
-                if self.registers[r]['width'] == iv['width'] and self.registers[r]['set_'] == False:
-                    self.registers[r]['value']  = iv['value']
-                    self.registers[r]['ivalue'] = iv['value']
+            for attempt in range(0, 2):
+                for r in self.registers:
+                    if r == self.get_accumulator_name() and attempt == 0:
+                        continue
 
-                    self.registers[r]['set_']    = True
+                    if self.registers[r]['width'] == iv['width'] and self.registers[r]['set_'] == False:
+                        self.registers[r]['value']  = iv['value']
+                        self.registers[r]['ivalue'] = iv['value']
 
-                    reg_found = True
-                    break
+                        self.registers[r]['set_']    = True
+
+                        reg_found = True
+                        break
 
             assert reg_found == True
 
@@ -91,8 +95,11 @@ class processor:
         # self.ram = [ 0 ] * self.ram_size  TODO
         pass
 
-    def get_accumulator(self) -> int:
+    def get_accumulator_name(self) -> str:
         assert False
+
+    def get_accumulator(self) -> int:
+        return self.get_register_value(self.get_accumulator_name())
 
     def get_register_value(self, reg_name: str) -> int:
         is_pair = 'pair' in self.registers[reg_name]
