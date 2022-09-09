@@ -7,24 +7,6 @@ import multiprocessing
 from random import SystemRandom
 import time
 
-targets  = [
-            { 'initial_values': [ { 'width' : 8, 'value' : 0 },
-                                  { 'width' : 8, 'value' : 0 } ],
-              'result_acc': 0 },
-            { 'initial_values': [ { 'width' : 8, 'value' : 1 },
-                                  { 'width' : 8, 'value' : 1 } ],
-              'result_acc': 2 },
-            { 'initial_values': [ { 'width' : 8, 'value' : 32 },
-                                  { 'width' : 8, 'value' : 16 } ],
-              'result_acc': 48 },
-           { 'initial_values': [ { 'width' : 8, 'value' : 16 },
-                                  { 'width' : 8, 'value' : 32 } ],
-              'result_acc': 48 },
-           { 'initial_values': [ { 'width' : 8, 'value' : 254 },
-                                  { 'width' : 8, 'value' : 8 } ],
-              'result_acc': 7 },
-    ]
-
 rng = SystemRandom()
 
 def instantiate_processor_z80():
@@ -84,6 +66,9 @@ def search(stop_q: multiprocessing.Queue, out_q: multiprocessing.Queue, instanti
         rc = test_program(proc, targets, program)
         ok = rc[0]
 
+        if rc[1] == 3:
+            print(program)
+
         n_targets_ok += rc[1]
 
         if ok:
@@ -105,7 +90,7 @@ def search(stop_q: multiprocessing.Queue, out_q: multiprocessing.Queue, instanti
 
         # see if it can be enhanced to make into something that
         # does work
-        if not ok and rc[1] > 0:
+        if False: #if not ok and rc[1] > 0:
             for mi in range(0, max_modify_iterations):
                 work = copy.deepcopy(program)
 
@@ -145,108 +130,136 @@ def search(stop_q: multiprocessing.Queue, out_q: multiprocessing.Queue, instanti
 
     out_q.put(None)
 
-stop_q = multiprocessing.Queue()
-data_q = multiprocessing.Queue()
+if __name__ == "__main__":
+    targets  = [
+                { 'initial_values': [ { 'width' : 8, 'value' : 0 },
+                                      { 'width' : 8, 'value' : 0 } ],
+                  'result_acc': 0 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 1 },
+                                      { 'width' : 8, 'value' : 1 } ],
+                  'result_acc': 2 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 32 },
+                                      { 'width' : 8, 'value' : 16 } ],
+                  'result_acc': 48 },
+               { 'initial_values': [ { 'width' : 8, 'value' : 16 },
+                                      { 'width' : 8, 'value' : 32 } ],
+                  'result_acc': 48 },
+               { 'initial_values': [ { 'width' : 8, 'value' : 254 },
+                                      { 'width' : 8, 'value' : 8 } ],
+                  'result_acc': 7 },
+        ]
 
-start_ts = time.time()
-prev_ts  = start_ts
+    # verify if monkeycoder works
+    test_program = instantiate_processor_obj().gen_test_program()
 
-processes = []
+    rc = test_program(proc, targets, test_program)
 
-for tnr in range(0, n_processes):
-    proces = multiprocessing.Process(target=search, args=(stop_q, data_q, instantiate_processor_obj))
-    proces.start()
+    assert rc[0]
+    assert rc[1] == len(targets)
 
-    processes.append(proces)
+    # do search
+    stop_q = multiprocessing.Queue()
+    data_q = multiprocessing.Queue()
 
-iterations = 0
+    start_ts = time.time()
+    prev_ts  = start_ts
 
-best_program    = None
-best_iterations = None
-first_output    = True
+    processes = []
 
-targets_ok_n     = 0
+    for tnr in range(0, n_processes):
+        proces = multiprocessing.Process(target=search, args=(stop_q, data_q, instantiate_processor_obj))
+        proces.start()
 
-while True:
-    result = data_q.get()
+        processes.append(proces)
 
-    if result is None:
-        break
+    iterations = 0
 
-    iterations += result[2]
+    best_program    = None
+    best_iterations = None
+    first_output    = True
 
-    if result[1] is not None:
-        targets_ok_n += result[1]
+    targets_ok_n     = 0
 
-    if result[3] == True:
-        program = result[0]
+    while True:
+        result = data_q.get()
 
-        if best_program is None or len(program) < len(best_program):
-            best_program    = program
+        if result is None:
+            break
 
-            best_iterations = iterations
+        iterations += result[2]
 
-            if first_output:
-                first_output = False
+        if result[1] is not None:
+            targets_ok_n += result[1]
 
-                print()
-                print(f'First output after {iterations} iterations ({time.time() - start_ts:.2f} seconds)')
+        if result[3] == True:
+            program = result[0]
 
-            if max_program_iterations is None:
-                break
+            if best_program is None or len(program) < len(best_program):
+                best_program    = program
 
-    now = time.time()
+                best_iterations = iterations
 
-    if now - prev_ts >= 2:
-        prev_ts = now
+                if first_output:
+                    first_output = False
 
-        diff_ts = now - start_ts
+                    print()
+                    print(f'First output after {iterations} iterations ({time.time() - start_ts:.2f} seconds)')
 
-        print(f'Iterations done: {iterations}, average n_ok: {targets_ok_n / iterations:.4f}[{targets_ok_n}], run time: {now - start_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second\r', end='')
+                if max_program_iterations is None:
+                    break
 
-for proces in processes:
-    stop_q.put('stop')
+        now = time.time()
 
-for proces in processes:
-    proces.join()
+        if now - prev_ts >= 2:
+            prev_ts = now
 
-n_deleted = 0
+            diff_ts = now - start_ts
 
-p = instantiate_processor_obj()
+            print(f'Iterations done: {iterations}, average n_ok: {targets_ok_n / iterations:.4f}[{targets_ok_n}], run time: {now - start_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second\r', end='')
 
-if best_program is not None:
-    idx = 0
+    for proces in processes:
+        stop_q.put('stop')
 
-    while idx < len(best_program):
-        work = copy.deepcopy(best_program)
+    for proces in processes:
+        proces.join()
 
-        del work[idx]
+    n_deleted = 0
 
-        rc = test_program(p, targets, work)
-        ok = rc[0]
+    p = instantiate_processor_obj()
 
-        if ok:
-            best_program = work
+    if best_program is not None:
+        idx = 0
 
-            n_deleted += 1
+        while idx < len(best_program):
+            work = copy.deepcopy(best_program)
 
-        else:
-            idx += 1
+            del work[idx]
 
-if best_program is not None:
-    best_program = p.get_program_init(targets[0]['initial_values']) + best_program
+            rc = test_program(p, targets, work)
+            ok = rc[0]
 
-end_ts = time.time()
+            if ok:
+                best_program = work
 
-print()
+                n_deleted += 1
 
-if best_program is not None:
-    diff_ts = end_ts - start_ts
+            else:
+                idx += 1
 
-    print(f'Iterations: {best_iterations}, length program: {len(best_program)}, took: {diff_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second, # deleted: {n_deleted}')
+    if best_program is not None:
+        best_program = p.get_program_init(targets[0]['initial_values']) + best_program
 
-    for instruction in best_program:
-        print(instruction['opcode'])
+    end_ts = time.time()
 
-else:
-    print(f'Did not succeed in {iterations} iterations')
+    print()
+
+    if best_program is not None:
+        diff_ts = end_ts - start_ts
+
+        print(f'Iterations: {best_iterations}, length program: {len(best_program)}, took: {diff_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second, # deleted: {n_deleted}')
+
+        for instruction in best_program:
+            print(instruction['opcode'])
+
+    else:
+        print(f'Did not succeed in {iterations} iterations')
