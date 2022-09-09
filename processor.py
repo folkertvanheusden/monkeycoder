@@ -88,7 +88,8 @@ class processor:
         assert False
 
     def reset_ram(self) -> None:
-        self.ram = [ 0 ] * self.ram_size
+        # self.ram = [ 0 ] * self.ram_size  TODO
+        pass
 
     def get_accumulator(self) -> int:
         assert False
@@ -101,6 +102,8 @@ class processor:
 
             for dest in self.registers[reg_name]['pair']:
                 cur_byte = self.registers[dest]['value']
+
+                assert cur_byte != None
                 assert cur_byte >= 0
                 assert cur_byte < 256
 
@@ -112,6 +115,7 @@ class processor:
         else:
             cur_byte = self.registers[reg_name]['value']
 
+            assert cur_byte != None
             assert cur_byte >= 0
             assert cur_byte < 256
 
@@ -144,7 +148,7 @@ class processor:
 
         for instruction in program:
             if instruction['instruction'] in [ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or ]:
-                work_value: int = -1
+                work_value:  int  = -1
                 first_value: bool = True
 
                 for source in instruction['sources']:
@@ -184,6 +188,8 @@ class processor:
 
                     else:
                         assert False
+
+                assert first_value == False
 
                 if instruction['destination']['type'] == processor.DestinationType.dt_reg:
                     mask = processor.masks[self.registers[instruction['destination']['name']]['width']]
