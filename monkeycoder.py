@@ -112,7 +112,7 @@ def search(stop_q: multiprocessing.Queue, out_q: multiprocessing.Queue, instanti
                         work.insert(idx, proc.pick_an_instruction())
 
                     elif action == 2:  # delete
-                        del work[idx]
+                        work.pop(idx)
 
                     elif action == 3:  # append
                         work.append(proc.pick_an_instruction())
@@ -236,7 +236,7 @@ if __name__ == "__main__":
         while idx < len(best_program):
             work = copy.deepcopy(best_program)
 
-            del work[idx]
+            work.pop(idx)
 
             rc = test_program(p, targets, work)
             ok = rc[0]
