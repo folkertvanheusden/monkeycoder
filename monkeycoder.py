@@ -210,7 +210,7 @@ for proces in processes:
 for proces in processes:
     proces.join()
 
-n_deleted     = 0
+n_deleted = 0
 
 p = instantiate_processor_obj()
 
