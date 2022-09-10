@@ -111,7 +111,7 @@ class processor:
 
                 assert cur_byte != None
                 assert cur_byte >= 0
-                assert cur_byte < 256
+                assert cur_byte <= self.masks[self.registers[reg_name]['width']]
 
                 value <<= 8
                 value |= cur_byte
@@ -123,7 +123,7 @@ class processor:
 
             assert cur_byte != None
             assert cur_byte >= 0
-            assert cur_byte < 256
+            assert cur_byte <= self.masks[self.registers[reg_name]['width']]
 
             return cur_byte
 
