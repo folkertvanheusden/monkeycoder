@@ -3,8 +3,8 @@
 from processor import processor
 from processor_z80 import processor_z80
 from processor_test import processor_test
-import multiprocessing
 import random
+import threading
 import time
 from typing import List
 
@@ -21,6 +21,11 @@ max_program_length     = 512
 n_iterations           = 16384
 
 n_processes            = 11
+
+best_lock = threading.Lock()
+best_cost = 10000000
+best_seed = None
+best_prog = None
 
 def copy_program(program: List[dict]) -> List[dict]:
     return program[:]
@@ -40,118 +45,167 @@ def test_program(proc, targets: List[dict], seed: int) -> float:
         if proc.get_accumulator() == target['result_acc']:
             n_targets_ok += 1
 
-    return 11. - (float(n_targets_ok) / len(targets) * 10 + float(len(program)) / max_program_length)
+    return 11. - (float(n_targets_ok) / len(targets) * 10 + float(len(program)) / max_program_length), program
 
 def linear_searcher(processor_obj, n_iterations):
-    print('linear searcher')
+    global best_cost
+    global best_lock
+    global best_prog
+    global best_seed
 
-    proc = processor_obj()
+    try:
+        proc = processor_obj()
 
-    best_cost = 1000000
-    best_seed = None
+        local_best_cost = 1000000
+        local_best_seed = None
 
-    start = time.time()
+        start = time.time()
 
-    for i in range(0, n_iterations):
-        cost = test_program(proc, targets, i)
+        for i in range(0, n_iterations):
+            cost, program = test_program(proc, targets, i)
 
-        if cost < best_cost:
-            best_cost = cost
-            best_seed = i
+            if cost < local_best_cost:
+                local_best_cost = cost
+                local_best_seed = i
 
-            print(time.time() - start, n_iterations - i, best_seed, best_cost)
+                with best_lock:
+                    if best_cost > local_best_cost:
+                        best_cost = local_best_cost
+                        best_seed = local_best_seed
+                        best_prog = program
+
+                        print('L  ', time.time() - start, n_iterations - i, best_seed, best_cost)
+
+    except Exception as e:
+        print('linear', e)
 
 def random_searcher(processor_obj, n_iterations):
-    print('random searcher')
+    global best_cost
+    global best_lock
+    global best_prog
+    global best_seed
 
-    proc = processor_obj()
+    try:
+        proc = processor_obj()
 
-    r = random.Random()
+        r = random.Random()
 
-    best_cost = 1000000
-    best_seed = None
+        local_best_cost = 1000000
+        local_best_seed = None
 
-    start = time.time()
+        start = time.time()
 
-    for i in range(0, n_iterations):
-        s = random.randint(0, 2**53 - 1)
+        for i in range(0, n_iterations):
+            s = random.randint(0, 2**53 - 1)
 
-        cost = test_program(proc, targets, s)
+            cost, program = test_program(proc, targets, s)
 
-        if cost < best_cost:
-            best_cost = cost
-            best_seed = s
+            if cost < local_best_cost:
+                local_best_cost = cost
+                local_best_seed = s
 
-            print(time.time() - start, n_iterations - i, best_seed, best_cost)
+                with best_lock:
+                    if best_cost > local_best_cost:
+                        best_cost = local_best_cost
+                        best_seed = local_best_seed
+                        best_prog = program
+
+                        print('R  ', time.time() - start, n_iterations - i, best_seed, best_cost)
+
+    except Exception as e:
+        print('random', e)
 
 def hill_climbing_searcher(processor_obj, n_iterations):
-    print('hill climbing searcher')
+    global best_cost
+    global best_lock
+    global best_prog
+    global best_seed
 
-    proc = processor_obj()
+    try:
+        proc = processor_obj()
 
-    r = random.Random()
+        r = random.Random()
 
-    best_cost = 1000000
-    best_seed = None
+        local_best_cost = 1000000
+        local_best_seed = None
 
-    n_to_do = n_iterations
+        n_to_do = n_iterations
 
-    start = time.time()
-
-    while n_to_do > 0:
-        seed = random.randint(0, 2**53 - 1)
-
-        cost = test_program(proc, targets, seed)
-
-        n_to_do -= 1
-
-        seed_low = seed - 1
-
-        n_low = 0
+        start = time.time()
 
         while n_to_do > 0:
-            cost_low = test_program(proc, targets, seed_low)
+            seed = random.randint(0, 2**53 - 1)
+
+            cost, program = test_program(proc, targets, seed)
+
+            if cost < local_best_cost:
+                local_best_cost = cost
+                local_best_seed = seed
+
+                with best_lock:
+                    if best_cost > local_best_cost:
+                        best_cost = local_best_cost
+                        best_seed = local_best_seed
+                        best_prog = program
+
+                        print('H-S', time.time() - start, n_to_do, best_seed, best_cost)
 
             n_to_do -= 1
 
-            if cost_low >= cost:
-                break
+            seed_low = seed - 1
 
-            cost = cost_low
+            while n_to_do > 0:
+                cost_low, program = test_program(proc, targets, seed_low)
 
-            seed_low -= 1
+                n_to_do -= 1
 
-            n_low += 1
+                if cost_low >= cost:
+                    break
 
-            if cost < best_cost:
-                best_cost = cost
-                best_seed = seed_low
+                cost = cost_low
 
-                print(time.time() - start, n_to_do, best_seed, best_cost, f'#low: {n_low}')
+                seed_low -= 1
 
-        seed_high = seed + 1
+                if cost < local_best_cost:
+                    local_best_cost = cost
+                    local_best_seed = seed_low
 
-        n_high = 0
+                    with best_lock:
+                        if best_cost > local_best_cost:
+                            best_cost = local_best_cost
+                            best_seed = local_best_seed
+                            best_prog = program
 
-        while n_to_do > 0:
-            cost_high = test_program(proc, targets, seed_high)
-
-            n_to_do -= 1
-
-            if cost_high >= cost:
-                break
-
-            cost = cost_high
+                            print('H-L', time.time() - start, n_to_do, best_seed, best_cost)
 
             seed_high = seed + 1
 
-            n_high += 1
+            while n_to_do > 0:
+                cost_high, program = test_program(proc, targets, seed_high)
 
-            if cost < best_cost:
-                best_cost = cost
-                best_seed = seed_high
+                n_to_do -= 1
 
-                print(time.time() - start, n_to_do, best_seed, best_cost, f'#high: {n_high}')
+                if cost_high >= cost:
+                    break
+
+                cost = cost_high
+
+                seed_high = seed + 1
+
+                if cost < local_best_cost:
+                    local_best_cost = cost
+                    local_best_seed = seed_high
+
+                    with best_lock:
+                        if best_cost > local_best_cost:
+                            best_cost = local_best_cost
+                            best_seed = local_best_seed
+                            best_prog = program
+
+                            print('H-R', time.time() - start, n_to_do, best_seed, best_cost)
+
+    except Exception as e:
+        print('hill climbing', e)
 
 if __name__ == "__main__":
     # verify if monkeycoder works
@@ -183,16 +237,31 @@ if __name__ == "__main__":
                { 'initial_values': [ { 'width' : 8, 'value' : 8 },
                                       { 'width' : 8, 'value' : 8 } ],
                   'result_acc': 64 },
+               { 'initial_values': [ { 'width' : 8, 'value' : 19 },
+                                      { 'width' : 8, 'value' : 31 } ],
+                  'result_acc': 77 },
+               { 'initial_values': [ { 'width' : 8, 'value' : 140 },
+                                      { 'width' : 8, 'value' : 202 } ],
+                  'result_acc': 120 },
+               { 'initial_values': [ { 'width' : 8, 'value' : 201 },
+                                      { 'width' : 8, 'value' : 153 } ],
+                  'result_acc': 33 },
         ]
 
-    linear_searcher(instantiate_processor_obj, n_iterations)
+    tl = threading.Thread(target=linear_searcher, args=(instantiate_processor_obj, n_iterations,))
+    tl.start()
 
-    print()
+    tr = threading.Thread(target=random_searcher, args=(instantiate_processor_obj, n_iterations,))
+    tr.start()
 
-    random_searcher(instantiate_processor_obj, n_iterations)
+    thc = threading.Thread(target=hill_climbing_searcher, args=(instantiate_processor_obj, n_iterations,))
+    thc.start()
 
-    print()
+    thc.join()
 
-    hill_climbing_searcher(instantiate_processor_obj, n_iterations)
+    tr.join()
 
-    print()
+    tl.join()
+
+    for line in best_prog:
+        print(line['opcode'])
