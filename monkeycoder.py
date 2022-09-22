@@ -24,14 +24,13 @@ n_processes            = 11
 
 best_lock = threading.Lock()
 best_cost = 10000000
-best_seed = None
 best_prog = None
 
 def copy_program(program: List[dict]) -> List[dict]:
     return program[:]
 
 # returns 0...x where 0 is perfect and x is bad
-def test_program(proc, program, targets: List[dict], seed: int, full: bool) -> float:
+def test_program(proc, program, targets: List[dict], full: bool) -> float:
     n_targets_ok = 0
 
     for target in targets:
@@ -52,7 +51,6 @@ def genetic_searcher(processor_obj, n_iterations):
     global best_cost
     global best_lock
     global best_prog
-    global best_seed
 
     try:
         proc = processor_obj()
@@ -60,15 +58,15 @@ def genetic_searcher(processor_obj, n_iterations):
         with best_lock:
             local_best_cost = best_cost
 
-        local_best_seed = None
-
         start = time.time()
 
         program = []
 
         work = None
 
-        for i in range(0, n_iterations):
+        n_iterations = 0
+
+        while True:
             if len(program) == 0:
                 program.append(proc.pick_an_instruction())
 
@@ -79,7 +77,11 @@ def genetic_searcher(processor_obj, n_iterations):
 
                 idx = random.randint(0, len(work) - 1)
 
-                action = random.choice([0, 1, 2, 3])
+                while True:
+                    action = random.choice([0, 1, 2, 3])
+
+                    if len(work) < max_program_length or action == 0 or action == 2:
+                        break
 
                 if action == 0:  # replace
                     work[idx] = proc.pick_an_instruction()
@@ -97,21 +99,21 @@ def genetic_searcher(processor_obj, n_iterations):
                     assert False
 
             if len(work) > 0:
-                cost = test_program(proc, work, targets, i, False)
+                cost = test_program(proc, work, targets, False)
 
                 if cost < local_best_cost:
                     local_best_cost = cost
-                    local_best_seed = i
 
                     program = work
 
                     with best_lock:
                         if best_cost > local_best_cost:
                             best_cost = local_best_cost
-                            best_seed = local_best_seed
                             best_prog = program
 
-                            print(time.time() - start, n_iterations - i, best_seed, best_cost)
+                            print(time.time() - start, n_iterations, best_cost, len(program))
+
+            n_iterations += 1
 
     except Exception as e:
         print(f'Exception: {e}')
