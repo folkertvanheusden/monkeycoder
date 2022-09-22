@@ -39,7 +39,7 @@ def test_program(proc, program, targets: List[dict], full: bool) -> float:
             n_targets_ok += 1
 
     if full:
-        return 11. - (float(n_targets_ok) / len(targets) * 10 + float(len(program)) / max_program_length), program
+        return 11. - (float(n_targets_ok) / len(targets) * 10 + float(len(program)) / max_program_length)
 
     return 1. - float(n_targets_ok) / len(targets)
 
@@ -70,11 +70,11 @@ def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, sto
 
                 idx = random.randint(0, len(work) - 1) if len(work) > 1 else 0
 
-                while True:
-                    action = random.choice([0, 1, 2, 3])
+                if len(work) >= max_program_length:
+                    action = random.choice([0, 2])
 
-                    if len(work) < max_program_length or action == 0 or action == 2:
-                        break
+                else:
+                    action = random.choice([0, 1, 2, 3])
 
                 if action == 0:  # replace
                     work[idx] = proc.pick_an_instruction()
@@ -92,7 +92,7 @@ def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, sto
                     assert False
 
             if len(work) > 0:
-                cost = test_program(proc, work, targets, False)
+                cost = test_program(proc, work, targets, True)
 
                 if cost <= local_best_cost:
                     if cost < local_best_cost:
@@ -128,7 +128,7 @@ def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, sto
     except Exception as e:
         print(f'Exception: {e}, line number: {e.__traceback__.tb_lineno}')
 
-    out_q.put(None)
+    stop_q.put(None)
 
 if __name__ == "__main__":
     # verify if monkeycoder works
@@ -207,15 +207,21 @@ if __name__ == "__main__":
 
         now         = time.time()
 
-        if best_program is None or cost < best_cost or (cost == best_cost and len(program) < len(best_program)):
+        if best_program is None or cost < best_cost:
             best_program    = program
             best_cost       = cost
             best_iterations = iterations
 
-            print(f'time: {time.time() - start_ts}, cost: {best_cost}, length: {len(best_program)}, iterations: {best_iterations}')
+            t_diff = time.time() - start_ts
+            i_s = iterations / t_diff
 
-        elif cost == best_cost and now - prev_now >= 2.5:
-            print(f'time: {time.time() - start_ts}, cost: {best_cost}, length: {len(best_program)}, iterations: {best_iterations}, current iterations: {iterations}')
+            print(f'time: {t_diff}, cost: {best_cost}, length: {len(best_program)}, iterations: {best_iterations}, i/s: {i_s:.2f}')
+
+        elif cost == best_cost and now - prev_now >= 2:
+            t_diff = time.time() - start_ts
+            i_s = iterations / t_diff
+
+            print(f'time: {t_diff}, cost: {best_cost}, length: {len(best_program)}, iterations: {best_iterations}, current iterations: {iterations}, i/s: {i_s:.2f}')
 
             prev_now = now
 
