@@ -57,7 +57,7 @@ def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, sto
 
         n_iterations = 0
 
-        miss = 0
+        hit = miss = 0
 
         while True:
             if len(program) == 0:
@@ -94,19 +94,22 @@ def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, sto
             if len(work) > 0:
                 cost = test_program(proc, work, targets, False)
 
-                if cost < local_best_cost:
+                if cost <= local_best_cost:
+                    if cost < local_best_cost:
+                        result_q.put((n_iterations, cost, work))
+
+                        if cost == 0:
+                            break
+
+                        n_iterations = 0
+
                     local_best_cost = cost
 
                     program = work
 
                     miss = 0
 
-                    result_q.put((n_iterations, cost, program))
-
-                    if cost == 0:
-                        break
-
-                    n_iterations = 0
+                    hit += 1
 
                 else:
                     miss += 1
@@ -117,6 +120,8 @@ def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, sto
                         random.seed()
 
                         program = proc.generate_program(random.randint(1, max_program_length))
+
+                    hit   = 0
 
             n_iterations += 1
 
@@ -170,6 +175,7 @@ if __name__ == "__main__":
     data_q: multiprocessing.Queue = multiprocessing.Queue()
 
     start_ts = time.time()
+    prev_now = 0
 
     processes = []
 
@@ -199,12 +205,19 @@ if __name__ == "__main__":
 
         program     = result[2]
 
+        now         = time.time()
+
         if best_program is None or cost < best_cost or (cost == best_cost and len(program) < len(best_program)):
             best_program    = program
             best_cost       = cost
             best_iterations = iterations
 
-            print(time.time() - start_ts, best_cost, best_iterations)
+            print(f'time: {time.time() - start_ts}, cost: {best_cost}, length: {len(best_program)}, iterations: {best_iterations}')
+
+        elif cost == best_cost and now - prev_now >= 2.5:
+            print(f'time: {time.time() - start_ts}, cost: {best_cost}, length: {len(best_program)}, iterations: {best_iterations}, current iterations: {iterations}')
+
+            prev_now = now
 
     for proces in processes:
         stop_q.put('stop')
