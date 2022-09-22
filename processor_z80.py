@@ -60,19 +60,19 @@ class processor_z80(processor):
         return instructions
 
     def pick_an_instruction(self) -> dict:
-        instr_type = self.rng.randint(0, 2)
+        instr_type = random.randint(0, 2)
 
         instruction: dict = {}
 
         if instr_type == 0:
-            sub_type = self.rng.choice([ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or ])
+            sub_type = random.choice([ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or ])
 
             instruction['instruction'] = sub_type
 
-            width = self.rng.choice([8, 16]) if sub_type == processor.Instruction.i_add else 8
+            width = random.choice([8, 16]) if sub_type == processor.Instruction.i_add else 8
 
             source1 = { 'type': processor.SourceType.st_reg, 'name': self.get_accumulator_name() }  # add a,b => a = a + b
-            source2 = { 'type': processor.SourceType.st_reg, 'name': self.pick_a_register(width, None) } if self.rng.choice([True, False]) or width == 16 else { 'type': processor.SourceType.st_val, 'value': self.rng.randint(0, 255) }
+            source2 = { 'type': processor.SourceType.st_reg, 'name': self.pick_a_register(width, None) } if random.choice([True, False]) or width == 16 else { 'type': processor.SourceType.st_val, 'value': random.randint(0, 255) }
             instruction['sources']     = [ source1, source2 ]
 
             instruction['destination'] = {}
@@ -95,19 +95,19 @@ class processor_z80(processor):
             instruction['destination']['type'] = processor.DestinationType.dt_reg
             instruction['destination']['name'] = self.pick_a_register(8, True)
 
-            if self.rng.randint(0, 1) == 0:
+            if random.randint(0, 1) == 0:
                 register = self.pick_a_register(8, True)
 
                 instruction['sources'] = [ { 'type': processor.SourceType.st_reg, 'name': register } ]
                 instruction['opcode'] = f"LD {instruction['destination']['name']}, {register}"
 
             else:
-                v = self.rng.randint(0, 255)
+                v = random.randint(0, 255)
                 instruction['sources'] = [ { 'type': processor.SourceType.st_val, 'value': v } ]
                 instruction['opcode'] = f"LD {instruction['destination']['name']}, {v}"
 
         elif instr_type == 2:
-            if self.rng.choice([False, True]):
+            if random.choice([False, True]):
                 instruction['instruction'] = processor.Instruction.i_shift_r
                 instruction['shift_n']     = 1  # Z80 can only shift 1 bit at a time
 

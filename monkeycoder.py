@@ -19,6 +19,7 @@ instantiate_processor_obj = instantiate_processor_z80
 max_program_iterations = None
 max_program_length     = 512
 n_iterations           = 16384
+max_n_miss             = max_program_length * 4  # 4 operation types (replace, append, delete, insert)
 
 n_processes            = 11
 
@@ -51,6 +52,8 @@ def genetic_searcher(processor_obj, n_iterations):
     global best_cost
     global best_lock
     global best_prog
+    global max_program_length
+    global max_n_miss
 
     try:
         proc = processor_obj()
@@ -60,11 +63,13 @@ def genetic_searcher(processor_obj, n_iterations):
 
         start = time.time()
 
-        program = []
+        program = proc.generate_program(random.randint(0, max_program_length))
 
         work = None
 
         n_iterations = 0
+
+        miss = 0
 
         while True:
             if len(program) == 0:
@@ -75,7 +80,7 @@ def genetic_searcher(processor_obj, n_iterations):
             else:
                 work = copy_program(program)
 
-                idx = random.randint(0, len(work) - 1)
+                idx = random.randint(0, len(work) - 1) if len(work) > 1 else 0
 
                 while True:
                     action = random.choice([0, 1, 2, 3])
@@ -106,6 +111,8 @@ def genetic_searcher(processor_obj, n_iterations):
 
                     program = work
 
+                    miss = 0
+
                     with best_lock:
                         if best_cost > local_best_cost:
                             best_cost = local_best_cost
@@ -113,10 +120,20 @@ def genetic_searcher(processor_obj, n_iterations):
 
                             print(time.time() - start, n_iterations, best_cost, len(program))
 
+                else:
+                    miss += 1
+
+                    if miss >= max_n_miss:
+                        miss = 0
+
+                        random.seed()
+
+                        program = proc.generate_program(random.randint(1, max_program_length))
+
             n_iterations += 1
 
     except Exception as e:
-        print(f'Exception: {e}')
+        print(f'Exception: {e}, line number: {e.__traceback__.tb_lineno}')
 
 if __name__ == "__main__":
     # verify if monkeycoder works

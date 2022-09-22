@@ -33,7 +33,6 @@ class processor:
     def __init__(self) -> None:
         self.registers: processor.registers_dict = { }
         self.ram_size: int   = 0
-        self.rng = random.Random()
 
     # allocate them
     def init_registers(self) -> None:
@@ -61,10 +60,8 @@ class processor:
 
             assert reg_found == True
 
-    def generate_program(self, seed: int, max_length: int) -> List[dict]:
-        self.rng.seed(seed)
-
-        instruction_count: int = self.rng.randint(1, max_length)
+    def generate_program(self, max_length: int) -> List[dict]:
+        instruction_count: int = random.randint(1, max_length)
 
         program: list[dict] = []
 
@@ -75,7 +72,7 @@ class processor:
 
     def pick_a_register(self, width: int, can_be_destination: Optional[bool]) -> dict:
         while True:
-            register = self.rng.choice(list(self.registers))
+            register = random.choice(list(self.registers))
 
             if self.registers[register]['width'] == width or width == None:
                 if can_be_destination == True:
