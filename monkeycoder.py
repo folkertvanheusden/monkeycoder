@@ -3,8 +3,8 @@
 from processor import processor
 from processor_z80 import processor_z80
 from processor_test import processor_test
+import multiprocessing
 import random
-import threading
 import time
 from typing import List
 
@@ -18,14 +18,9 @@ instantiate_processor_obj = instantiate_processor_z80
 
 max_program_iterations = None
 max_program_length     = 512
-n_iterations           = 16384
 max_n_miss             = max_program_length * 4  # 4 operation types (replace, append, delete, insert)
 
-n_processes            = 11
-
-best_lock = threading.Lock()
-best_cost = 10000000
-best_prog = None
+n_processes            = max(1, multiprocessing.cpu_count() - 1)
 
 def copy_program(program: List[dict]) -> List[dict]:
     return program[:]
@@ -48,18 +43,11 @@ def test_program(proc, program, targets: List[dict], full: bool) -> float:
 
     return 1. - float(n_targets_ok) / len(targets)
 
-def genetic_searcher(processor_obj, n_iterations):
-    global best_cost
-    global best_lock
-    global best_prog
-    global max_program_length
-    global max_n_miss
-
+def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, stop_q, result_q):
     try:
         proc = processor_obj()
 
-        with best_lock:
-            local_best_cost = best_cost
+        local_best_cost = 1000000
 
         start = time.time()
 
@@ -113,12 +101,12 @@ def genetic_searcher(processor_obj, n_iterations):
 
                     miss = 0
 
-                    with best_lock:
-                        if best_cost > local_best_cost:
-                            best_cost = local_best_cost
-                            best_prog = program
+                    result_q.put((n_iterations, cost, program))
 
-                            print(time.time() - start, n_iterations, best_cost, len(program))
+                    if cost == 0:
+                        break
+
+                    n_iterations = 0
 
                 else:
                     miss += 1
@@ -134,6 +122,8 @@ def genetic_searcher(processor_obj, n_iterations):
 
     except Exception as e:
         print(f'Exception: {e}, line number: {e.__traceback__.tb_lineno}')
+
+    out_q.put(None)
 
 if __name__ == "__main__":
     # verify if monkeycoder works
@@ -176,15 +166,89 @@ if __name__ == "__main__":
                   'result_acc': 33 },
         ]
 
-    thc = threading.Thread(target=genetic_searcher, args=(instantiate_processor_obj, n_iterations,))
-    thc.start()
+    stop_q: multiprocessing.Queue = multiprocessing.Queue()
+    data_q: multiprocessing.Queue = multiprocessing.Queue()
 
-    thc.join()
+    start_ts = time.time()
 
-    print('finish')
+    processes = []
 
-    for line in instantiate_processor_obj().get_program_init(targets[1]['initial_values']):
-        print(line['opcode'])
+    for tnr in range(0, n_processes):
+        proces = multiprocessing.Process(target=genetic_searcher, args=(instantiate_processor_obj, targets, max_program_length, max_n_miss, stop_q, data_q,))
+        proces.start()
 
-    for line in best_prog:
-        print(line['opcode'])
+        processes.append(proces)
+
+    iterations = 0
+
+    best_program    = None
+    best_cost       = 1000000
+    best_iterations = None
+
+    first_output    = True
+
+    while True:
+        result = data_q.get()
+
+        if result is None:
+            break
+
+        iterations += result[0]
+
+        cost        = result[1]
+
+        program     = result[2]
+
+        if best_program is None or cost < best_cost or (cost == best_cost and len(program) < len(best_program)):
+            best_program    = program
+            best_cost       = cost
+            best_iterations = iterations
+
+            print(time.time() - start_ts, best_cost, best_iterations)
+
+    for proces in processes:
+        stop_q.put('stop')
+
+    for proces in processes:
+        proces.join()
+
+    n_deleted = 0
+
+    p = instantiate_processor_obj()
+
+    if best_program is not None:
+        idx = 0
+
+        while idx < len(best_program):
+            work = copy_program(best_program)
+
+            work.pop(idx)
+
+            rc = test_program(p, targets, work)
+            ok = rc[0]
+
+            if ok:
+                best_program = work
+
+                n_deleted += 1
+
+            else:
+                idx += 1
+
+    if best_program is not None:
+        best_program = p.get_program_init(targets[0]['initial_values']) + best_program
+
+    end_ts = time.time()
+
+    print()
+
+    if best_program is not None:
+        diff_ts = end_ts - start_ts
+
+        print(f'Iterations: {best_iterations}, length program: {len(best_program)}, took: {diff_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second, # deleted: {n_deleted}')
+
+        for instruction in best_program:
+            print(instruction['opcode'])
+
+    else:
+        print(f'Did not succeed in {iterations} iterations')
