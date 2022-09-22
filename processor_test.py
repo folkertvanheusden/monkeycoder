@@ -1,9 +1,6 @@
 from processor import processor
 from processor_z80 import processor_z80
-from random import SystemRandom
 from typing import List
-
-rng = SystemRandom()
 
 class processor_test(processor_z80):
     def __init__(self):
