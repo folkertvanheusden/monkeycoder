@@ -56,7 +56,9 @@ def linear_searcher(processor_obj, n_iterations):
     try:
         proc = processor_obj()
 
-        local_best_cost = 1000000
+        with best_lock:
+            local_best_cost = best_cost
+
         local_best_seed = None
 
         start = time.time()
@@ -90,7 +92,9 @@ def random_searcher(processor_obj, n_iterations):
 
         r = random.Random()
 
-        local_best_cost = 1000000
+        with best_lock:
+            local_best_cost = best_cost
+
         local_best_seed = None
 
         start = time.time()
@@ -126,7 +130,9 @@ def hill_climbing_searcher(processor_obj, n_iterations):
 
         r = random.Random()
 
-        local_best_cost = 1000000
+        with best_lock:
+            local_best_cost = best_cost
+
         local_best_seed = None
 
         n_to_do = n_iterations
