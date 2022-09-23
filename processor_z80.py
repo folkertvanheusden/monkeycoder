@@ -21,6 +21,7 @@ class processor_z80(processor):
         self.instr_mapping[processor.Instruction.i_load      ] = 'LD'
         self.instr_mapping[processor.Instruction.i_shift_r   ] = 'SRL'
         self.instr_mapping[processor.Instruction.i_rot_circ_r] = 'RRC'
+        self.instr_mapping[processor.Instruction.i_rot_circ_l] = 'RLC'
 
     def init_registers(self) -> None:
         self.registers: processor.registers_dict = {}
@@ -122,7 +123,9 @@ class processor_z80(processor):
             instructions.append(instruction)
 
         elif instr_type == 2:
-            if random.choice([False, True]):
+            sub_type = random.choice([0, 1, 2])
+
+            if sub_type == 0:
                 instruction['instruction'] = processor.Instruction.i_shift_r
                 instruction['shift_n']     = 1  # Z80 can only shift 1 bit at a time
 
@@ -132,7 +135,7 @@ class processor_z80(processor):
 
                 instruction['opcode'] = f"SRL {instruction['destination']['name']}"
 
-            else:
+            elif sub_type == 1:
                 instruction['instruction'] = processor.Instruction.i_rot_circ_r
                 instruction['shift_n']     = 1  # Z80 can only shift 1 bit at a time
 
@@ -141,6 +144,19 @@ class processor_z80(processor):
                 instruction['destination']['name'] = self.pick_a_register(8, True)
 
                 instruction['opcode'] = f"RRC {instruction['destination']['name']}"
+
+            elif sub_type == 2:
+                instruction['instruction'] = processor.Instruction.i_rot_circ_l
+                instruction['shift_n']     = 1  # Z80 can only shift 1 bit at a time
+
+                instruction['destination'] = {}
+                instruction['destination']['type'] = processor.DestinationType.dt_reg
+                instruction['destination']['name'] = self.pick_a_register(8, True)
+
+                instruction['opcode'] = f"RLC {instruction['destination']['name']}"
+
+            else:
+                assert False
 
             instructions.append(instruction)
 
@@ -171,6 +187,9 @@ class processor_z80(processor):
                 instruction['opcode'] = 'CCF'
 
                 instructions.append(instruction)
+
+            else:
+                assert False
 
         else:
             assert False
