@@ -60,6 +60,10 @@ class processor:
 
             assert reg_found == True
 
+        self.flag_carry    = False
+        self.flag_zero     = False
+        self.flag_negative = False
+
     def generate_program(self, max_length: int) -> List[dict]:
         instruction_count: int = random.randint(1, max_length)
 
@@ -145,6 +149,15 @@ class processor:
 
             self.registers[reg_name]['value'] = value
 
+    def _set_flags_add(self, dest, dest_value, mask):
+        assert False
+
+    def _set_flags_sub(self, dest, dest_value, mask):
+        assert False
+
+    def _set_flags_logic(self, dest, dest_value, mask):
+        assert False
+
     def execute_program(self, initial_values: dict, program: dict) -> None:
         self.reset_registers(initial_values)
 
@@ -154,6 +167,11 @@ class processor:
             if instruction['instruction'] in [ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or ]:
                 work_value:  int  = -1
                 first_value: bool = True
+
+                mask: Optional[int] = None
+
+                if instruction['destination']['type'] == processor.DestinationType.dt_reg:
+                    mask = processor.masks[self.registers[instruction['destination']['name']]['width']]
 
                 for source in instruction['sources']:
                     cur_value: int = -1
@@ -195,9 +213,22 @@ class processor:
 
                 assert first_value == False
 
-                if instruction['destination']['type'] == processor.DestinationType.dt_reg:
-                    mask = processor.masks[self.registers[instruction['destination']['name']]['width']]
+                if instruction['instruction'] == processor.Instruction.i_add:
+                    self._set_flags_add(instruction['destination']['name'], work_value, mask)
 
+                elif instruction['instruction'] == processor.Instruction.i_sub:
+                    self._set_flags_sub(instruction['destination']['name'], work_value, mask)
+
+                elif instruction['instruction'] == processor.Instruction.i_xor:
+                    self._set_flags_logic(instruction['destination']['name'], work_value, mask)
+
+                elif instruction['instruction'] == processor.Instruction.i_and:
+                    self._set_flags_logic(instruction['destination']['name'], work_value, mask)
+
+                elif instruction['instruction'] == processor.Instruction.i_or:
+                    self._set_flags_logic(instruction['destination']['name'], work_value, mask)
+
+                if instruction['destination']['type'] == processor.DestinationType.dt_reg:
                     work_value &= mask
 
                     self.set_register_value(instruction['destination']['name'], work_value)
@@ -231,11 +262,16 @@ class processor:
 
                 work_value = self.get_register_value(register)
 
-                work_value >>= instruction['shift_n']
+                if instruction['shift_n'] > 0:
+                    work_value >>= instruction['shift_n'] - 1
+
+                    self.flag_carry = work_value & 1
+
+                    work_value >>= 1
 
                 self.set_register_value(register, work_value)
 
-            elif instruction['instruction'] == processor.Instruction.i_rot_circ_r:
+            elif instruction['instruction'] == processor.Instruction.i_rot_circ_r:  # z80: RRC
                 register = instruction['destination']['name']
 
                 work_value = self.get_register_value(register)
@@ -244,6 +280,8 @@ class processor:
 
                 for i in range(0, instruction['shift_n']):
                     old_0 = work_value & 1
+
+                    self.flag_carry = old_0
 
                     work_value >>= 1
 
@@ -259,13 +297,15 @@ class processor:
                 mask = processor.masks[self.registers[register]['width']]
 
                 for i in range(0, instruction['shift_n']):
-                    old_7 = 1 if work_value & 128 else 0
+                    old_carry = self.flag_carry
+
+                    self.flag_carry = 1 if work_value & 128 else 0
 
                     work_value <<= 1
 
                     work_value &= mask
 
-                    work_value |= old_7
+                    work_value |= old_carry
 
                 self.set_register_value(register, work_value)
 

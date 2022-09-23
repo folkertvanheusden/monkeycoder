@@ -177,7 +177,23 @@ def get_targets_add():
                    'result_acc': 98 },
         ]
 
-def get_targets_shift():
+def get_targets_shift_1():
+    return [
+                { 'initial_values': [ { 'width' : 8, 'value' : 0 },
+                                      { 'width' : 8, 'value' : 1 } ],
+                  'result_acc': 0 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 1 },
+                                      { 'width' : 8, 'value' : 1 } ],
+                  'result_acc': 2 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 3 },
+                                       { 'width' : 8, 'value' : 1 } ],
+                   'result_acc': 6 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 193 },
+                                       { 'width' : 8, 'value' : 1 } ],
+                   'result_acc': 130 },
+        ]
+
+def get_targets_shift_n():
     return [
                 { 'initial_values': [ { 'width' : 8, 'value' : 0 },
                                       { 'width' : 8, 'value' : 3 } ],
@@ -260,7 +276,7 @@ if __name__ == "__main__":
 
     assert n_targets_ok == len(targets)
 
-    targets = get_targets_shift()
+    targets = get_targets_shift_n()
 
     result_q: multiprocessing.Queue = multiprocessing.Manager().Queue()
 
@@ -333,7 +349,7 @@ if __name__ == "__main__":
         if any_change == False and one_ok == True:
             break
 
-        time.sleep(31)
+        time.sleep(5)
 
     end_ts = time.time()
 

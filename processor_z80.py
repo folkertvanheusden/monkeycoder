@@ -132,5 +132,26 @@ class processor_z80(processor):
 
         return instruction
 
+    def _set_flags_add(self, dest, dest_value, mask):
+        final_dest_value   = dest_value & mask
+
+        self.flag_carry    = (dest_value & (mask + 1)) != 0
+        self.flag_zero     = final_dest_value == 0
+        self.flag_negative = False
+
+    def _set_flags_sub(self, dest, dest_value, mask):
+        final_dest_value   = dest_value & mask
+
+        self.flag_carry    = (dest_value & (mask + 1)) != 0
+        self.flag_zero     = final_dest_value == 0
+        self.flag_negative = True
+
+    def _set_flags_logic(self, dest, dest_value, mask):
+        final_dest_value   = dest_value & mask
+
+        self.flag_carry    = False
+        self.flag_zero     = final_dest_value == 0
+        self.flag_negative = False
+
     def get_accumulator_name(self) -> str:
         return 'A'
