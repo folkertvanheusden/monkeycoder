@@ -21,7 +21,7 @@ max_program_iterations = None
 max_program_length     = 512
 max_n_miss             = max_program_length * 4  # 4 operation types (replace, append, delete, insert)
 
-n_processes            = 16#max(1, multiprocessing.cpu_count() - 1)
+n_processes            = multiprocessing.cpu_count()
 
 def copy_program(program: List[dict]) -> List[dict]:
     return program[:]
@@ -79,17 +79,19 @@ def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, cmd
             except Exception as e:
                 pass
 
-            if len(program) == 0:
-                program.append(proc.pick_an_instruction())
+            work = copy_program(program)
 
-                work = copy_program(program)
+            n_actions = random.randint(1, 16)
 
-            else:
-                work = copy_program(program)
+            for i in range(0, n_actions):
+                len_work = len(work)
 
-                idx = random.randint(0, len(work) - 1) if len(work) > 1 else 0
+                idx = random.randint(0, len_work - 1) if len_work > 1 else 0
 
-                if len(work) >= max_program_length:
+                if len_work == 0:
+                    action = 3
+
+                elif len_work >= max_program_length:
                     action = random.choice([0, 2])
 
                 else:
