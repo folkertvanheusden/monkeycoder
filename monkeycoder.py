@@ -227,7 +227,7 @@ def get_targets_multiply():
     return targets
 
 if __name__ == "__main__":
-    logging.basicConfig(filename='monkeycoder.log', encoding='utf-8', level=logging.DEBUG, format='%(asctime)s %(levelname)s:\t%(message)s')
+    logging.basicConfig(filename='monkeycoder.log', encoding='utf-8', level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
 
     console = logging.StreamHandler()
     console.setLevel(logging.INFO)
@@ -279,17 +279,21 @@ if __name__ == "__main__":
 
     first_output    = True
 
-    while True:
-        one_ok     = False
+    prev_ts         = time.time()
 
-        any_change = False
+    while True:
+        one_ok      = False
+
+        any_change  = False
+
+        batch_it    = 0
 
         for q in cmd_qs:
             q.put('results')
 
             result      = result_q.get()
 
-            iterations += result[0]
+            batch_it   += result[0]
 
             cost        = result[1]
 
@@ -334,15 +338,19 @@ if __name__ == "__main__":
 
                 os.rename(tmp_file, 'current.asm')
 
+        iterations += batch_it
+
         now    = time.time()
         t_diff = now - start_ts
         i_s    = iterations / t_diff
 
         if best_program != None:
-            logging.info(f'dt: {t_diff:6.3f}, cost: {best_cost:.6f}, length: {len(best_program)}, iterations: {best_iterations}, current iterations: {iterations}, i/s: {i_s:.2f}, ok: {one_ok}')
+            logging.info(f'dt: {t_diff:6.3f}, cost: {best_cost:.6f}, length: {len(best_program):3d}, #it: {best_iterations}, cur.#it: {iterations}, i/s: {i_s:.2f}, cur i/s: {batch_it / (now - prev_ts):.2f}, ok: {one_ok}')
 
         if any_change == False and one_ok == True:
             break
+
+        prev_ts = now
 
         time.sleep(5)
 
