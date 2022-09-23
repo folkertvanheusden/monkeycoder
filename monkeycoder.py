@@ -42,7 +42,9 @@ def test_program(proc: processor, program: List[dict], targets: List[dict], full
             n_targets_ok += 1
 
     if full:
-        return 11. - (float(n_targets_ok) / len(targets) * 10 - float(len(program)) / max_program_length), n_targets_ok == len(targets)
+        mul = 1 / len(targets)
+
+        return 11. - (float(n_targets_ok) * mul * 10 - float(len(program)) / max_program_length * mul), n_targets_ok == len(targets)
 
     return 1. - float(n_targets_ok) / len(targets), n_targets_ok == len(targets)
 
@@ -157,117 +159,70 @@ def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, cmd
     sys.exit(0)
 
 def get_targets_add():
-    return [
-                { 'initial_values': [ { 'width' : 8, 'value' : 0 },
-                                      { 'width' : 8, 'value' : 0 } ],
-                  'result_acc': 0 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 3 },
-                                      { 'width' : 8, 'value' : 1 } ],
-                  'result_acc': 4 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 1 },
-                                      { 'width' : 8, 'value' : 3 } ],
-                  'result_acc': 4 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 3 },
-                                       { 'width' : 8, 'value' : 3 } ],
-                   'result_acc': 6 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 8 },
-                                       { 'width' : 8, 'value' : 8 } ],
-                   'result_acc': 16 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 19 },
-                                       { 'width' : 8, 'value' : 31 } ],
-                   'result_acc': 50 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 140 },
-                                       { 'width' : 8, 'value' : 202 } ],
-                   'result_acc': 86 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 201 },
-                                       { 'width' : 8, 'value' : 153 } ],
-                   'result_acc': 98 },
-        ]
+    targets = []
+
+    for i in range(0, 256):
+        j = (i * 13) & 255
+
+        targets.append(
+                { 'initial_values': [ { 'width' : 8, 'value' : i },
+                                      { 'width' : 8, 'value' : j } ],
+                  'result_acc': (i + j) & 255 }
+                )
+
+    return targets
 
 def get_targets_shift_1():
-    return [
-                { 'initial_values': [ { 'width' : 8, 'value' : 0 },
+    targets = []
+
+    for i in range(0, 256):
+        targets.append(
+                { 'initial_values': [ { 'width' : 8, 'value' : i },
                                       { 'width' : 8, 'value' : 1 } ],
-                  'result_acc': 0 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 1 },
-                                      { 'width' : 8, 'value' : 1 } ],
-                  'result_acc': 2 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 3 },
-                                       { 'width' : 8, 'value' : 1 } ],
-                   'result_acc': 6 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 193 },
-                                       { 'width' : 8, 'value' : 1 } ],
-                   'result_acc': 130 },
-        ]
+                  'result_acc': (i << 1) & 255 }
+                )
+
+    return targets
 
 def get_targets_shift_n():
-    return [
-                { 'initial_values': [ { 'width' : 8, 'value' : 0 },
+    targets = []
+
+    for i in range(0, 256):
+        targets.append(
+                { 'initial_values': [ { 'width' : 8, 'value' : i },
                                       { 'width' : 8, 'value' : 3 } ],
-                  'result_acc': 0 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 1 },
-                                      { 'width' : 8, 'value' : 3 } ],
-                  'result_acc': 8 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 3 },
-                                       { 'width' : 8, 'value' : 3 } ],
-                   'result_acc': 24 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 193 },
-                                       { 'width' : 8, 'value' : 3 } ],
-                   'result_acc': 8 },
-        ]
+                  'result_acc': (i << 3) & 255 }
+                )
+
+    return targets
 
 def get_targets_shift_loop():
-    return [
-                { 'initial_values': [ { 'width' : 8, 'value' : 0 },
-                                      { 'width' : 8, 'value' : 0 } ],
-                  'result_acc': 0 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 1 },
-                                      { 'width' : 8, 'value' : 0 } ],
-                  'result_acc': 1 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 1 },
-                                      { 'width' : 8, 'value' : 1 } ],
-                  'result_acc': 2 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 1 },
-                                       { 'width' : 8, 'value' : 2 } ],
-                   'result_acc': 4 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 3 },
-                                       { 'width' : 8, 'value' : 3 } ],
-                   'result_acc': 24 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 9 },
-                                       { 'width' : 8, 'value' : 5 } ],
-                   'result_acc': 32 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 193 },
-                                       { 'width' : 8, 'value' : 7 } ],
-                   'result_acc': 128 },
-        ]
+    targets = []
+
+    for i in range(0, 256):
+        shift_n = (i * 13) & 7
+
+        targets.append(
+                { 'initial_values': [ { 'width' : 8, 'value' : i },
+                                      { 'width' : 8, 'value' : shift_n } ],
+                  'result_acc': (i << shift_n) & 255 }
+                )
+
+    return targets
 
 def get_targets_multiply():
-    return [
-                { 'initial_values': [ { 'width' : 8, 'value' : 0 },
-                                      { 'width' : 8, 'value' : 0 } ],
-                  'result_acc': 0 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 3 },
-                                      { 'width' : 8, 'value' : 1 } ],
-                  'result_acc': 3 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 1 },
-                                      { 'width' : 8, 'value' : 3 } ],
-                  'result_acc': 3 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 3 },
-                                       { 'width' : 8, 'value' : 3 } ],
-                   'result_acc': 9 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 8 },
-                                       { 'width' : 8, 'value' : 8 } ],
-                   'result_acc': 64 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 19 },
-                                       { 'width' : 8, 'value' : 31 } ],
-                   'result_acc': 77 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 140 },
-                                       { 'width' : 8, 'value' : 202 } ],
-                   'result_acc': 120 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 201 },
-                                       { 'width' : 8, 'value' : 153 } ],
-                   'result_acc': 33 },
-        ]
+    targets = []
+
+    for i in range(0, 256):
+        j = (i * 13) & 255
+
+        targets.append(
+                { 'initial_values': [ { 'width' : 8, 'value' : i },
+                                      { 'width' : 8, 'value' : j } ],
+                  'result_acc': (i * j) & 255 }
+                )
+
+    return targets
 
 if __name__ == "__main__":
     # verify if monkeycoder works
@@ -283,7 +238,7 @@ if __name__ == "__main__":
 
     assert n_targets_ok == len(targets)
 
-    targets = get_targets_shift_n()
+    targets = get_targets_add()
 
     result_q: multiprocessing.Queue = multiprocessing.Manager().Queue()
 
@@ -396,6 +351,6 @@ if __name__ == "__main__":
     print('Wait for the processes to stop...')
 
     for proces in multiprocessing.active_children():
-        proces.join(0.001)
+        proces.join()
 
     print('Bye')
