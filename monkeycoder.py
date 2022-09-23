@@ -238,7 +238,7 @@ if __name__ == "__main__":
 
     assert n_targets_ok == len(targets)
 
-    targets = get_targets_add()
+    targets = get_targets_shift_loop()
 
     result_q: multiprocessing.Queue = multiprocessing.Manager().Queue()
 

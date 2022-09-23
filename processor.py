@@ -16,6 +16,8 @@ class processor:
         i_complement_carry = 11
         i_clear_carry      = 12
         i_rot_circ_l = 13
+        i_add_carry  = 14
+        i_sub_carry  = 15
 
     class SourceType(Enum):
         st_reg = 1
@@ -170,7 +172,7 @@ class processor:
 
         try:
             for instruction in program:
-                if instruction['instruction'] in [ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or ]:
+                if instruction['instruction'] in [ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or, processor.Instruction.i_add_carry, processor.Instruction.i_sub_carry ]:
                     work_value:  int  = -1
                     first_value: bool = True
 
@@ -199,10 +201,16 @@ class processor:
 
                             work_value = cur_value
 
-                        elif instruction['instruction'] == processor.Instruction.i_add:
+                            if instruction['instruction'] == processor.Instruction.i_add_carry:
+                                work_value += self.flag_carry
+
+                            elif instruction['instruction'] == processor.Instruction.i_sub_carry:
+                                work_value -= self.flag_carry
+
+                        elif instruction['instruction'] in [processor.Instruction.i_add, processor.Instruction.i_add_carry]:
                             work_value += cur_value
 
-                        elif instruction['instruction'] == processor.Instruction.i_sub:
+                        elif instruction['instruction'] in [processor.Instruction.i_sub, processor.Instruction.i_sub_carry]:
                             work_value -= cur_value
 
                         elif instruction['instruction'] == processor.Instruction.i_xor:
@@ -219,10 +227,10 @@ class processor:
 
                     assert first_value == False
 
-                    if instruction['instruction'] == processor.Instruction.i_add:
+                    if instruction['instruction'] in [processor.Instruction.i_add, processor.Instruction.i_add_carry]:
                         self._set_flags_add(instruction['destination']['name'], work_value, mask)
 
-                    elif instruction['instruction'] == processor.Instruction.i_sub:
+                    elif instruction['instruction'] in [processor.Instruction.i_sub, processor.Instruction.i_sub_carry]:
                         self._set_flags_sub(instruction['destination']['name'], work_value, mask)
 
                     elif instruction['instruction'] == processor.Instruction.i_xor:

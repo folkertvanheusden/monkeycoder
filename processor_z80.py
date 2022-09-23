@@ -12,7 +12,9 @@ class processor_z80(processor):
 
         self.instr_mapping: dict = {}
         self.instr_mapping[processor.Instruction.i_add       ] = 'ADD'
+        self.instr_mapping[processor.Instruction.i_add_carry ] = 'ADC'
         self.instr_mapping[processor.Instruction.i_sub       ] = 'SUB'
+        self.instr_mapping[processor.Instruction.i_sub_carry ] = 'SBC'
         self.instr_mapping[processor.Instruction.i_xor       ] = 'XOR'
         self.instr_mapping[processor.Instruction.i_and       ] = 'AND'
         self.instr_mapping[processor.Instruction.i_or        ] = 'OR'
@@ -67,7 +69,7 @@ class processor_z80(processor):
         instruction = { }
 
         if instr_type == 0:
-            sub_type = random.choice([ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or ])
+            sub_type = random.choice([ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or, processor.Instruction.i_add_carry, processor.Instruction.i_sub_carry ])
 
             instruction['instruction'] = sub_type
 
