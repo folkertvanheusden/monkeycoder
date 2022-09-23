@@ -68,8 +68,6 @@ def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, cmd
             try:
                 cmd = cmd_q.get_nowait()
 
-                print(time.time(), cmd)
-
                 if cmd == 'stop':
                     break
 
@@ -161,6 +159,27 @@ if __name__ == "__main__":
                 { 'initial_values': [ { 'width' : 8, 'value' : 0 },
                                       { 'width' : 8, 'value' : 0 } ],
                   'result_acc': 0 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 3 },
+                                      { 'width' : 8, 'value' : 1 } ],
+                  'result_acc': 3 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 1 },
+                                      { 'width' : 8, 'value' : 3 } ],
+                  'result_acc': 3 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 3 },
+                                       { 'width' : 8, 'value' : 3 } ],
+                   'result_acc': 9 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 8 },
+                                       { 'width' : 8, 'value' : 8 } ],
+                   'result_acc': 64 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 19 },
+                                       { 'width' : 8, 'value' : 31 } ],
+                   'result_acc': 77 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 140 },
+                                       { 'width' : 8, 'value' : 202 } ],
+                   'result_acc': 120 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 201 },
+                                       { 'width' : 8, 'value' : 153 } ],
+                   'result_acc': 33 },
         ]
 
     result_q: multiprocessing.Queue = multiprocessing.Manager().Queue()
@@ -216,11 +235,6 @@ if __name__ == "__main__":
                 best_cost       = cost
                 best_iterations = iterations
 
-                t_diff = time.time() - start_ts
-                i_s = iterations / t_diff
-
-                print(f'time: {t_diff}, cost: {best_cost}, length: {len(best_program)}, iterations: {best_iterations}, i/s: {i_s:.2f}, {ok}')
-
                 any_change = True
 
             elif cost == best_cost:
@@ -230,10 +244,11 @@ if __name__ == "__main__":
 
                     any_change = True
 
-        t_diff = time.time() - start_ts
-        i_s = iterations / t_diff
+        now    = time.time()
+        t_diff = now - start_ts
+        i_s    = iterations / t_diff
 
-        print(f'time: {t_diff}, cost: {best_cost}, length: {len(best_program)}, iterations: {best_iterations}, current iterations: {iterations}, i/s: {i_s:.2f}')
+        print(f'now: {now}, dt: {t_diff}, cost: {best_cost}, length: {len(best_program)}, iterations: {best_iterations}, current iterations: {iterations}, i/s: {i_s:.2f}, ok: {one_ok}')
 
         if any_change == False and one_ok == True:
             break
