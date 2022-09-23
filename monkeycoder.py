@@ -92,10 +92,10 @@ def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, cmd
                     action = 3
 
                 elif len_work >= max_program_length:
-                    action = random.choice([0, 2])
+                    action = random.choice([0, 2, 4])
 
                 else:
-                    action = random.choice([0, 1, 2, 3])
+                    action = random.choice([0, 1, 2, 3, 4])
 
                 if action == 0:  # replace
                     work[idx] = proc.pick_an_instruction()
@@ -109,11 +109,20 @@ def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, cmd
                 elif action == 3:  # append
                     work.append(proc.pick_an_instruction())
 
+                elif action == 4:  # swap
+                    idx2 = random.randint(0, len_work - 1) if len_work > 1 else 0
+
+                    if idx != idx2:
+                        work[idx], work[idx2] = work[idx2], work[idx]
+
                 else:
                     assert False
 
             if len(work) > 0:
                 cost, ok = test_program(proc, work, targets, True)
+                
+                if ok:
+                    print(' *** OK ***')
 
                 if cost <= local_best_cost:
                     local_best_cost = cost
@@ -255,7 +264,7 @@ if __name__ == "__main__":
         if any_change == False and one_ok == True:
             break
 
-        time.sleep(1)
+        time.sleep(31)
 
     end_ts = time.time()
 
