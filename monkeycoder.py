@@ -106,18 +106,18 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
                 if action == 0:  # replace
                     work.pop(idx)
 
-                    for instruction in reversed(proc.pick_an_instruction(max_program_length)):
+                    for instruction in reversed(proc.pick_an_instruction(len(work) + 1)):
                         work.insert(idx, instruction)
 
                 elif action == 1:  # insert
-                    for instruction in reversed(proc.pick_an_instruction(max_program_length)):
+                    for instruction in reversed(proc.pick_an_instruction(len(work) + 1)):
                         work.insert(idx, instruction)
 
                 elif action == 2:  # delete
                     work.pop(idx)
 
                 elif action == 3:  # append
-                    for instruction in proc.pick_an_instruction(max_program_length):
+                    for instruction in proc.pick_an_instruction(len(work) + 1):
                         work.append(instruction)
 
                 elif action == 4:  # swap
@@ -242,7 +242,7 @@ if __name__ == "__main__":
     assert n_targets_ok == len(targets)
 
     print('Go!')
-    targets = get_targets_multiply()
+    targets = get_targets_shift_loop()
 
     result_q: multiprocessing.Queue = multiprocessing.Manager().Queue()
 
