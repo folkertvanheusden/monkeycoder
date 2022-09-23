@@ -161,7 +161,7 @@ def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, cmd
 def get_targets_add():
     targets = []
 
-    for i in range(0, 256):
+    for i in range(0, 256, 7):
         j = (i * 13) & 255
 
         targets.append(
@@ -175,7 +175,7 @@ def get_targets_add():
 def get_targets_shift_1():
     targets = []
 
-    for i in range(0, 256):
+    for i in range(0, 256, 7):
         targets.append(
                 { 'initial_values': [ { 'width' : 8, 'value' : i },
                                       { 'width' : 8, 'value' : 1 } ],
@@ -187,7 +187,7 @@ def get_targets_shift_1():
 def get_targets_shift_n():
     targets = []
 
-    for i in range(0, 256):
+    for i in range(0, 256, 7):
         targets.append(
                 { 'initial_values': [ { 'width' : 8, 'value' : i },
                                       { 'width' : 8, 'value' : 3 } ],
@@ -199,7 +199,7 @@ def get_targets_shift_n():
 def get_targets_shift_loop():
     targets = []
 
-    for i in range(0, 256):
+    for i in range(0, 256, 11):
         shift_n = (i * 13) & 7
 
         targets.append(
@@ -213,7 +213,7 @@ def get_targets_shift_loop():
 def get_targets_multiply():
     targets = []
 
-    for i in range(0, 256):
+    for i in range(0, 256, 7):
         j = (i * 13) & 255
 
         targets.append(
@@ -238,7 +238,7 @@ if __name__ == "__main__":
 
     assert n_targets_ok == len(targets)
 
-    targets = get_targets_shift_loop()
+    targets = get_targets_multiply()
 
     result_q: multiprocessing.Queue = multiprocessing.Manager().Queue()
 
