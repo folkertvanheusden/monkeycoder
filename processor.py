@@ -398,7 +398,7 @@ class processor:
             return True
 
         except Exception as e:
-            print(f'Exception: {e}, line number: {e.__traceback__.tb_lineno}')
+            logging.error(f'Exception: {e}, line number: {e.__traceback__.tb_lineno}')
 
         return False
 

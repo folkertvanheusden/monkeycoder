@@ -3,6 +3,7 @@
 from processor import processor
 from processor_z80 import processor_z80
 from processor_test import processor_test
+import logging
 import multiprocessing
 import os
 import random
@@ -23,7 +24,6 @@ max_program_length     = 512
 max_n_miss             = max_program_length * 4  # 4 operation types (replace, append, delete, insert)
 
 n_processes            = multiprocessing.cpu_count()
-print(f'Number of processes: {n_processes}')
 
 def copy_program(program: List[dict]) -> List[dict]:
     # return program[:]
@@ -35,7 +35,7 @@ def test_program(proc: processor, program: List[dict], targets: List[dict], full
 
     for target in targets:
         if proc.execute_program(target['initial_values'], program) == False:  # False: in case an execution error occured
-            print('Failed executing program')
+            logging.error('Failed executing program')
             n_targets_ok = 0
             sys.exit(1)
             break
@@ -154,9 +154,9 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
             n_iterations += 1
 
     except Exception as e:
-        print(f'Exception: {e}, line number: {e.__traceback__.tb_lineno}')
+        logging.error(f'Exception: {e}, line number: {e.__traceback__.tb_lineno}')
 
-    print('Process is terminating...')
+    logging.info('Process is terminating...')
 
     sys.exit(0)
 
@@ -227,8 +227,17 @@ def get_targets_multiply():
     return targets
 
 if __name__ == "__main__":
+    logging.basicConfig(filename='monkeycoder.log', encoding='utf-8', level=logging.DEBUG, format='%(asctime)s %(levelname)s:\t%(message)s')
+
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    console.setFormatter(logging.Formatter('%(asctime)s %(levelname)s:\t%(message)s'))
+    logging.getLogger('').addHandler(console)
+
+    logging.info(f'Number of processes: {n_processes}')
+
     # verify if monkeycoder works
-    print('Verify...')
+    logging.info('Verify...')
     proc = instantiate_processor_test()
 
     test_program_code, targets = proc.gen_test_program()
@@ -241,7 +250,7 @@ if __name__ == "__main__":
 
     assert n_targets_ok == len(targets)
 
-    print('Go!')
+    logging.info('Go!')
     targets = get_targets_shift_loop()
 
     result_q: multiprocessing.Queue = multiprocessing.Manager().Queue()
@@ -295,19 +304,14 @@ if __name__ == "__main__":
 
             one_ok |= ok
 
+            write_file = False
+
             if best_program is None or cost < best_cost:
                 best_program    = program
                 best_cost       = cost
                 best_iterations = iterations
 
-                tmp_file = '__.tmp.dat.-'
-
-                fh = open(tmp_file, 'w')
-                for line in best_program:
-                    fh.write(f'{line["opcode"]}\n')
-                fh.close()
-
-                os.rename(tmp_file, 'current.asm')
+                write_file      = True
 
                 any_change = True
 
@@ -318,12 +322,24 @@ if __name__ == "__main__":
 
                     any_change = True
 
+                    write_file = True
+
+            if write_file:
+                tmp_file = '__.tmp.dat.-'
+
+                fh = open(tmp_file, 'w')
+                for line in best_program:
+                    fh.write(f'{line["opcode"]}\n')
+                fh.close()
+
+                os.rename(tmp_file, 'current.asm')
+
         now    = time.time()
         t_diff = now - start_ts
         i_s    = iterations / t_diff
 
         if best_program != None:
-            print(f'now: {now:.3f}, dt: {t_diff:6.3f}, cost: {best_cost:.6f}, length: {len(best_program)}, iterations: {best_iterations}, current iterations: {iterations}, i/s: {i_s:.2f}, ok: {one_ok}')
+            logging.info(f'dt: {t_diff:6.3f}, cost: {best_cost:.6f}, length: {len(best_program)}, iterations: {best_iterations}, current iterations: {iterations}, i/s: {i_s:.2f}, ok: {one_ok}')
 
         if any_change == False and one_ok == True:
             break
@@ -336,27 +352,25 @@ if __name__ == "__main__":
 
     best_program = proc.get_program_init(targets[0]['initial_values']) + best_program
 
-    print()
-
     if best_program is not None:
         diff_ts = end_ts - start_ts
 
-        print(f'Iterations: {best_iterations}, length program: {len(best_program)}, took: {diff_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second')
+        logging.info(f'Iterations: {best_iterations}, length program: {len(best_program)}, took: {diff_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second')
 
         for instruction in best_program:
-            print(instruction['opcode'])
+            logging.info(instruction['opcode'])
 
     else:
-        print(f'Did not succeed in {iterations} iterations')
+        logging.info(f'Did not succeed in {iterations} iterations')
 
-    print('Finishing processes...')
+    logging.info('Finishing processes...')
 
     for q in cmd_qs:
         q.put('stop')
 
-    print('Wait for the processes to stop...')
+    logging.info('Wait for the processes to stop...')
 
     for proces in multiprocessing.active_children():
         proces.join()
 
-    print('Bye')
+    logging.info('Bye')

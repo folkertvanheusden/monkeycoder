@@ -228,7 +228,7 @@ class processor_z80(processor):
             return instructions
 
         except Exception as e:
-            print(f'Exception: {e}, line number: {e.__traceback__.tb_lineno}')
+            logging.error(f'Exception: {e}, line number: {e.__traceback__.tb_lineno}')
 
     def _set_flags_add(self, dest, dest_value, mask):
         final_dest_value   = dest_value & mask
