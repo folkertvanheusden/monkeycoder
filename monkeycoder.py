@@ -317,7 +317,7 @@ if __name__ == "__main__":
         i_s    = iterations / t_diff
 
         if best_program != None:
-            print(f'now: {now:.3f}, dt: {t_diff:.3f}, cost: {best_cost:.3f}, length: {len(best_program)}, iterations: {best_iterations}, current iterations: {iterations}, i/s: {i_s:.2f}, ok: {one_ok}')
+            print(f'now: {now:.3f}, dt: {t_diff:6.3f}, cost: {best_cost:.6f}, length: {len(best_program)}, iterations: {best_iterations}, current iterations: {iterations}, i/s: {i_s:.2f}, ok: {one_ok}')
 
         if any_change == False and one_ok == True:
             break
