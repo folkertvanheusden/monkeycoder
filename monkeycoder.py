@@ -81,7 +81,7 @@ def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, cmd
 
             work = copy_program(program)
 
-            n_actions = random.randint(1, 16)
+            n_actions = random.randint(1, 8)
 
             for i in range(0, n_actions):
                 len_work = len(work)
@@ -250,7 +250,7 @@ if __name__ == "__main__":
         t_diff = now - start_ts
         i_s    = iterations / t_diff
 
-        print(f'now: {now}, dt: {t_diff}, cost: {best_cost}, length: {len(best_program)}, iterations: {best_iterations}, current iterations: {iterations}, i/s: {i_s:.2f}, ok: {one_ok}')
+        print(f'now: {now:.3f}, dt: {t_diff:.3f}, cost: {best_cost:.3f}, length: {len(best_program)}, iterations: {best_iterations}, current iterations: {iterations}, i/s: {i_s:.2f}, ok: {one_ok}')
 
         if any_change == False and one_ok == True:
             break
