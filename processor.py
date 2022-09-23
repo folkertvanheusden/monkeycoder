@@ -402,7 +402,7 @@ class processor:
 
         return False
 
-    def gen_test_program(self):
+    def generate_test_program(self):
         self.init_registers()
 
         program = []

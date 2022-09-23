@@ -240,7 +240,7 @@ if __name__ == "__main__":
     logging.info('Verify...')
     proc = instantiate_processor_test()
 
-    test_program_code, targets = proc.gen_test_program()
+    test_program_code, targets = proc.generate_test_program()
 
     n_targets_ok = 0
 
