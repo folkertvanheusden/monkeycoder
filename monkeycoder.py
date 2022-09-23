@@ -163,7 +163,7 @@ if __name__ == "__main__":
                   'result_acc': 0 },
         ]
 
-    result_q: multiprocessing.Queue = multiprocessing.Queue()
+    result_q: multiprocessing.Queue = multiprocessing.Manager().Queue()
 
     prev_now = 0
 
@@ -173,7 +173,7 @@ if __name__ == "__main__":
     cmd_qs    = []
 
     for tnr in range(0, n_processes):
-        cmd_q: multiprocessing.Queue = multiprocessing.Queue()
+        cmd_q: multiprocessing.Queue = multiprocessing.Manager().Queue()
         cmd_qs.append(cmd_q)
 
         proces = multiprocessing.Process(target=genetic_searcher, args=(instantiate_processor_obj, targets, max_program_length, max_n_miss, cmd_q, result_q,))
