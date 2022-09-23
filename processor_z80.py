@@ -59,10 +59,12 @@ class processor_z80(processor):
 
         return instructions
 
-    def pick_an_instruction(self) -> dict:
-        instr_type = random.randint(0, 2)
+    def pick_an_instruction(self) -> List[dict]:
+        instr_type = random.randint(0, 3)
 
-        instruction: dict = {}
+        instructions: List[dict] = [ ]
+
+        instruction = { }
 
         if instr_type == 0:
             sub_type = random.choice([ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or ])
@@ -88,6 +90,8 @@ class processor_z80(processor):
             else:
                 assert False
 
+            instructions.append(instruction)
+
         elif instr_type == 1:
             instruction['instruction'] = processor.Instruction.i_load
 
@@ -105,6 +109,8 @@ class processor_z80(processor):
                 v = random.randint(0, 255)
                 instruction['sources'] = [ { 'type': processor.SourceType.st_val, 'value': v } ]
                 instruction['opcode'] = f"LD {instruction['destination']['name']}, {v}"
+
+            instructions.append(instruction)
 
         elif instr_type == 2:
             if random.choice([False, True]):
@@ -127,10 +133,40 @@ class processor_z80(processor):
 
                 instruction['opcode'] = f"RRC {instruction['destination']['name']}"
 
+            instructions.append(instruction)
+
+        elif instr_type == 3:
+            sub_instr_type = random.choice([0, 1, 2])
+
+            if sub_instr_type == 0:  # set carry flag
+                instruction['instruction'] = processor.Instruction.i_set_carry
+                instruction['opcode'] = 'SCF'
+
+                instructions.append(instruction)
+
+            elif sub_instr_type == 1:  # clear carry flag
+                instruction1 = { }
+                instruction1['instruction'] = processor.Instruction.i_set_carry
+                instruction1['opcode'] = 'SCF'
+
+                instructions.append(instruction1)
+
+                instruction2 = { }
+                instruction2['instruction'] = processor.Instruction.i_complement_carry
+                instruction2['opcode'] = 'CCF'
+
+                instructions.append(instruction2)
+
+            elif sub_instr_type == 2:  # complement carry flag
+                instruction['instruction'] = processor.Instruction.i_complement_carry
+                instruction['opcode'] = 'CCF'
+
+                instructions.append(instruction)
+
         else:
             assert False
 
-        return instruction
+        return instructions
 
     def _set_flags_add(self, dest, dest_value, mask):
         final_dest_value   = dest_value & mask

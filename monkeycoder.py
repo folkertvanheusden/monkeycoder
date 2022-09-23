@@ -35,6 +35,7 @@ def test_program(proc: processor, program: List[dict], targets: List[dict], full
         if proc.execute_program(target['initial_values'], program) == False:  # False: in case an execution error occured
             print('Failed executing program')
             n_targets_ok = 0
+            sys.exit(1)
             break
 
         if proc.get_accumulator() == target['result_acc']:
@@ -99,16 +100,21 @@ def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, cmd
                     action = random.choice([0, 1, 2, 3, 4])
 
                 if action == 0:  # replace
-                    work[idx] = proc.pick_an_instruction()
+                    work.pop(idx)
+
+                    for instruction in reversed(proc.pick_an_instruction()):
+                        work.insert(idx, instruction)
 
                 elif action == 1:  # insert
-                    work.insert(idx, proc.pick_an_instruction())
+                    for instruction in reversed(proc.pick_an_instruction()):
+                        work.insert(idx, instruction)
 
                 elif action == 2:  # delete
                     work.pop(idx)
 
                 elif action == 3:  # append
-                    work.append(proc.pick_an_instruction())
+                    for instruction in proc.pick_an_instruction():
+                        work.append(instruction)
 
                 elif action == 4:  # swap
                     idx2 = random.randint(0, len_work - 1) if len_work > 1 else 0
@@ -321,13 +327,16 @@ if __name__ == "__main__":
 
             program     = result[2]
 
+            if program is None:
+                continue
+
             ok          = result[3]
 
             now         = time.time()
 
             one_ok |= ok
 
-            if (best_program is None) or cost < best_cost:
+            if best_program is None or cost < best_cost:
                 best_program    = program
                 best_cost       = cost
                 best_iterations = iterations
@@ -352,7 +361,8 @@ if __name__ == "__main__":
         t_diff = now - start_ts
         i_s    = iterations / t_diff
 
-        print(f'now: {now:.3f}, dt: {t_diff:.3f}, cost: {best_cost:.3f}, length: {len(best_program)}, iterations: {best_iterations}, current iterations: {iterations}, i/s: {i_s:.2f}, ok: {one_ok}')
+        if best_program != None:
+            print(f'now: {now:.3f}, dt: {t_diff:.3f}, cost: {best_cost:.3f}, length: {len(best_program)}, iterations: {best_iterations}, current iterations: {iterations}, i/s: {i_s:.2f}, ok: {one_ok}')
 
         if any_change == False and one_ok == True:
             break

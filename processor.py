@@ -12,6 +12,10 @@ class processor:
         i_load       = 6
         i_shift_r    = 8
         i_rot_circ_r = 9
+        i_set_carry  = 10
+        i_complement_carry = 11
+        i_clear_carry      = 12
+        i_rot_circ_l = 13
 
     class SourceType(Enum):
         st_reg = 1
@@ -70,7 +74,8 @@ class processor:
         program: list[dict] = []
 
         for nr in range(0, instruction_count):
-            program.append(self.pick_an_instruction())
+            for instruction in self.pick_an_instruction():
+                program.append(instruction)
 
         return program
 
@@ -163,154 +168,171 @@ class processor:
 
         self.reset_ram()
 
-        for instruction in program:
-            if instruction['instruction'] in [ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or ]:
-                work_value:  int  = -1
-                first_value: bool = True
+        try:
+            for instruction in program:
+                if instruction['instruction'] in [ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or ]:
+                    work_value:  int  = -1
+                    first_value: bool = True
 
-                mask: Optional[int] = None
+                    mask: Optional[int] = None
 
-                if instruction['destination']['type'] == processor.DestinationType.dt_reg:
-                    mask = processor.masks[self.registers[instruction['destination']['name']]['width']]
+                    if instruction['destination']['type'] == processor.DestinationType.dt_reg:
+                        mask = processor.masks[self.registers[instruction['destination']['name']]['width']]
 
-                for source in instruction['sources']:
-                    cur_value: int = -1
+                    for source in instruction['sources']:
+                        cur_value: int = -1
 
-                    if source['type'] == processor.SourceType.st_reg:
-                        cur_value = self.get_register_value(source['name'])
+                        if source['type'] == processor.SourceType.st_reg:
+                            cur_value = self.get_register_value(source['name'])
 
-                    elif source['type'] == processor.SourceType.st_val:
-                        cur_value = source['value']
+                        elif source['type'] == processor.SourceType.st_val:
+                            cur_value = source['value']
 
-                    else:
-                        assert False
+                        else:
+                            assert False
 
-                    assert cur_value != None
-                    assert cur_value >= 0
+                        assert cur_value != None
+                        assert cur_value >= 0
 
-                    if first_value == True:
-                        first_value = False
+                        if first_value == True:
+                            first_value = False
 
-                        work_value = cur_value
+                            work_value = cur_value
 
-                    elif instruction['instruction'] == processor.Instruction.i_add:
-                        work_value += cur_value
+                        elif instruction['instruction'] == processor.Instruction.i_add:
+                            work_value += cur_value
+
+                        elif instruction['instruction'] == processor.Instruction.i_sub:
+                            work_value -= cur_value
+
+                        elif instruction['instruction'] == processor.Instruction.i_xor:
+                            work_value ^= cur_value
+
+                        elif instruction['instruction'] == processor.Instruction.i_and:
+                            work_value &= cur_value
+
+                        elif instruction['instruction'] == processor.Instruction.i_or:
+                            work_value |= cur_value
+
+                        else:
+                            assert False
+
+                    assert first_value == False
+
+                    if instruction['instruction'] == processor.Instruction.i_add:
+                        self._set_flags_add(instruction['destination']['name'], work_value, mask)
 
                     elif instruction['instruction'] == processor.Instruction.i_sub:
-                        work_value -= cur_value
+                        self._set_flags_sub(instruction['destination']['name'], work_value, mask)
 
                     elif instruction['instruction'] == processor.Instruction.i_xor:
-                        work_value ^= cur_value
+                        self._set_flags_logic(instruction['destination']['name'], work_value, mask)
 
                     elif instruction['instruction'] == processor.Instruction.i_and:
-                        work_value &= cur_value
+                        self._set_flags_logic(instruction['destination']['name'], work_value, mask)
 
                     elif instruction['instruction'] == processor.Instruction.i_or:
-                        work_value |= cur_value
+                        self._set_flags_logic(instruction['destination']['name'], work_value, mask)
+
+                    if instruction['destination']['type'] == processor.DestinationType.dt_reg:
+                        work_value &= mask
+
+                        self.set_register_value(instruction['destination']['name'], work_value)
 
                     else:
                         assert False
 
-                assert first_value == False
+                elif instruction['instruction'] == processor.Instruction.i_load:
+                    # load should have only one source
+                    assert len(instruction['sources']) == 1
 
-                if instruction['instruction'] == processor.Instruction.i_add:
-                    self._set_flags_add(instruction['destination']['name'], work_value, mask)
+                    source = instruction['sources'][0]
 
-                elif instruction['instruction'] == processor.Instruction.i_sub:
-                    self._set_flags_sub(instruction['destination']['name'], work_value, mask)
+                    if source['type'] == processor.SourceType.st_reg:
+                        work_value = self.get_register_value(source['name'])
 
-                elif instruction['instruction'] == processor.Instruction.i_xor:
-                    self._set_flags_logic(instruction['destination']['name'], work_value, mask)
+                    elif source['type'] == processor.SourceType.st_val:
+                        work_value = source['value']
 
-                elif instruction['instruction'] == processor.Instruction.i_and:
-                    self._set_flags_logic(instruction['destination']['name'], work_value, mask)
+                    else:
+                        assert False
 
-                elif instruction['instruction'] == processor.Instruction.i_or:
-                    self._set_flags_logic(instruction['destination']['name'], work_value, mask)
+                    if instruction['destination']['type'] == processor.DestinationType.dt_reg:
+                        self.set_register_value(instruction['destination']['name'], work_value)
 
-                if instruction['destination']['type'] == processor.DestinationType.dt_reg:
-                    work_value &= mask
+                    else:
+                        assert False
 
-                    self.set_register_value(instruction['destination']['name'], work_value)
+                elif instruction['instruction'] == processor.Instruction.i_shift_r:
+                    register = instruction['destination']['name']
+
+                    work_value = self.get_register_value(register)
+
+                    if instruction['shift_n'] > 0:
+                        work_value >>= instruction['shift_n'] - 1
+
+                        self.flag_carry = work_value & 1
+
+                        work_value >>= 1
+
+                    self.set_register_value(register, work_value)
+
+                elif instruction['instruction'] == processor.Instruction.i_rot_circ_r:  # z80: RRC
+                    register = instruction['destination']['name']
+
+                    work_value = self.get_register_value(register)
+
+                    bit_shift_n = self.registers[register]['width'] - 1
+
+                    for i in range(0, instruction['shift_n']):
+                        old_0 = work_value & 1
+
+                        self.flag_carry = old_0
+
+                        work_value >>= 1
+
+                        work_value |= old_0 << bit_shift_n
+
+                    self.set_register_value(register, work_value)
+
+                elif instruction['instruction'] == processor.Instruction.i_rot_circ_l:
+                    register = instruction['destination']['name']
+
+                    work_value = self.get_register_value(register)
+
+                    mask = processor.masks[self.registers[register]['width']]
+
+                    for i in range(0, instruction['shift_n']):
+                        old_carry = self.flag_carry
+
+                        self.flag_carry = True if work_value & 128 else False
+
+                        work_value <<= 1
+
+                        work_value &= mask
+
+                        work_value |= old_carry
+
+                    self.set_register_value(register, work_value)
+
+                elif instruction['instruction'] == processor.Instruction.i_set_carry:
+                    self.flag_carry = True
+
+                elif instruction['instruction'] == processor.Instruction.i_complement_carry:
+                    self.flag_carry = not self.flag_carry
+
+                elif instruction['instruction'] == processor.Instruction.i_clear_carry:
+                    self.flag_carry = False
 
                 else:
                     assert False
 
-            elif instruction['instruction'] == processor.Instruction.i_load:
-                # load should have only one source
-                assert len(instruction['sources']) == 1
+            return True
 
-                source = instruction['sources'][0]
+        except Exception as e:
+            print(f'Exception: {e}, line number: {e.__traceback__.tb_lineno}')
 
-                if source['type'] == processor.SourceType.st_reg:
-                    work_value = self.get_register_value(source['name'])
-
-                elif source['type'] == processor.SourceType.st_val:
-                    work_value = source['value']
-
-                else:
-                    assert False
-
-                if instruction['destination']['type'] == processor.DestinationType.dt_reg:
-                    self.set_register_value(instruction['destination']['name'], work_value)
-
-                else:
-                    assert False
-
-            elif instruction['instruction'] == processor.Instruction.i_shift_r:
-                register = instruction['destination']['name']
-
-                work_value = self.get_register_value(register)
-
-                if instruction['shift_n'] > 0:
-                    work_value >>= instruction['shift_n'] - 1
-
-                    self.flag_carry = work_value & 1
-
-                    work_value >>= 1
-
-                self.set_register_value(register, work_value)
-
-            elif instruction['instruction'] == processor.Instruction.i_rot_circ_r:  # z80: RRC
-                register = instruction['destination']['name']
-
-                work_value = self.get_register_value(register)
-
-                bit_shift_n = self.registers[register]['width'] - 1
-
-                for i in range(0, instruction['shift_n']):
-                    old_0 = work_value & 1
-
-                    self.flag_carry = old_0
-
-                    work_value >>= 1
-
-                    work_value |= old_0 << bit_shift_n
-
-                self.set_register_value(register, work_value)
-
-            elif instruction['instruction'] == processor.Instruction.i_rot_circ_l:
-                register = instruction['destination']['name']
-
-                work_value = self.get_register_value(register)
-
-                mask = processor.masks[self.registers[register]['width']]
-
-                for i in range(0, instruction['shift_n']):
-                    old_carry = self.flag_carry
-
-                    self.flag_carry = 1 if work_value & 128 else 0
-
-                    work_value <<= 1
-
-                    work_value &= mask
-
-                    work_value |= old_carry
-
-                self.set_register_value(register, work_value)
-
-            else:
-                assert False
+        return False
 
     def gen_test_program(self):
         self.init_registers()
