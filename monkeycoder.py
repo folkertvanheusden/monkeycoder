@@ -68,13 +68,13 @@ def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, cmd
             try:
                 cmd = cmd_q.get_nowait()
 
-                if cmd == 'stop':
-                    break
-
                 if cmd == 'results':
                     result_q.put((n_iterations, local_best_cost, local_best_prog, local_best_ok))
 
                     n_iterations = 0
+
+                elif cmd == 'stop':
+                    break
 
             except Exception as e:
                 pass
