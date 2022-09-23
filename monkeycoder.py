@@ -121,9 +121,6 @@ def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, cmd
             if len(work) > 0:
                 cost, ok = test_program(proc, work, targets, True)
                 
-                if ok:
-                    print(' *** OK ***')
-
                 if cost <= local_best_cost:
                     local_best_cost = cost
                     local_best_prog = copy_program(work)
@@ -152,21 +149,77 @@ def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, cmd
 
     sys.exit(0)
 
-if __name__ == "__main__":
-    # verify if monkeycoder works
-    proc = instantiate_processor_test()
+def get_targets_add():
+    return [
+                { 'initial_values': [ { 'width' : 8, 'value' : 0 },
+                                      { 'width' : 8, 'value' : 0 } ],
+                  'result_acc': 0 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 3 },
+                                      { 'width' : 8, 'value' : 1 } ],
+                  'result_acc': 4 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 1 },
+                                      { 'width' : 8, 'value' : 3 } ],
+                  'result_acc': 4 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 3 },
+                                       { 'width' : 8, 'value' : 3 } ],
+                   'result_acc': 6 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 8 },
+                                       { 'width' : 8, 'value' : 8 } ],
+                   'result_acc': 16 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 19 },
+                                       { 'width' : 8, 'value' : 31 } ],
+                   'result_acc': 50 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 140 },
+                                       { 'width' : 8, 'value' : 202 } ],
+                   'result_acc': 86 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 201 },
+                                       { 'width' : 8, 'value' : 153 } ],
+                   'result_acc': 98 },
+        ]
 
-    test_program_code, targets = proc.gen_test_program()
+def get_targets_shift():
+    return [
+                { 'initial_values': [ { 'width' : 8, 'value' : 0 },
+                                      { 'width' : 8, 'value' : 3 } ],
+                  'result_acc': 0 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 1 },
+                                      { 'width' : 8, 'value' : 3 } ],
+                  'result_acc': 8 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 3 },
+                                       { 'width' : 8, 'value' : 3 } ],
+                   'result_acc': 24 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 193 },
+                                       { 'width' : 8, 'value' : 3 } ],
+                   'result_acc': 8 },
+        ]
 
-    n_targets_ok = 0
+def get_targets_shift_loop():
+    return [
+                { 'initial_values': [ { 'width' : 8, 'value' : 0 },
+                                      { 'width' : 8, 'value' : 0 } ],
+                  'result_acc': 0 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 1 },
+                                      { 'width' : 8, 'value' : 0 } ],
+                  'result_acc': 1 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 1 },
+                                      { 'width' : 8, 'value' : 1 } ],
+                  'result_acc': 2 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 1 },
+                                       { 'width' : 8, 'value' : 2 } ],
+                   'result_acc': 4 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 3 },
+                                       { 'width' : 8, 'value' : 3 } ],
+                   'result_acc': 24 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 9 },
+                                       { 'width' : 8, 'value' : 5 } ],
+                   'result_acc': 32 },
+                { 'initial_values': [ { 'width' : 8, 'value' : 193 },
+                                       { 'width' : 8, 'value' : 7 } ],
+                   'result_acc': 128 },
+        ]
 
-    for target in targets:
-        if proc.execute_program(target['initial_values'], test_program_code) != False and proc.get_accumulator() == target['result_acc']:
-            n_targets_ok += 1
-
-    assert n_targets_ok == len(targets)
-
-    targets  = [
+def get_targets_multiply():
+    return [
                 { 'initial_values': [ { 'width' : 8, 'value' : 0 },
                                       { 'width' : 8, 'value' : 0 } ],
                   'result_acc': 0 },
@@ -192,6 +245,22 @@ if __name__ == "__main__":
                                        { 'width' : 8, 'value' : 153 } ],
                    'result_acc': 33 },
         ]
+
+if __name__ == "__main__":
+    # verify if monkeycoder works
+    proc = instantiate_processor_test()
+
+    test_program_code, targets = proc.gen_test_program()
+
+    n_targets_ok = 0
+
+    for target in targets:
+        if proc.execute_program(target['initial_values'], test_program_code) != False and proc.get_accumulator() == target['result_acc']:
+            n_targets_ok += 1
+
+    assert n_targets_ok == len(targets)
+
+    targets = get_targets_shift()
 
     result_q: multiprocessing.Queue = multiprocessing.Manager().Queue()
 
