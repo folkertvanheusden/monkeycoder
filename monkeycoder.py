@@ -44,29 +44,39 @@ def test_program(proc: processor, program: List[dict], targets: List[dict], full
 
     return 1. - float(n_targets_ok) / len(targets), n_targets_ok == len(targets)
 
-def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, stop_q, result_q):
+def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, cmd_q, result_q):
     try:
         proc = processor_obj()
 
         local_best_cost = 1000000
 
+        local_best_prog = None
+
+        local_best_ok   = False
+
         start = time.time()
 
-        program = proc.generate_program(random.randint(0, max_program_length))
+        program = proc.generate_program(random.randint(1, max_program_length))
 
         work = None
 
         n_iterations = 0
 
-        hit = miss = 0
+        miss = 0
 
         while True:
             try:
-                if stop_q.get_nowait() == 'stop':
-                    print('finished')
+                cmd = cmd_q.get_nowait()
+
+                print(time.time(), cmd)
+
+                if cmd == 'stop':
                     break
 
-                break
+                if cmd == 'results':
+                    result_q.put((n_iterations, local_best_cost, local_best_prog, local_best_ok))
+
+                    n_iterations = 0
 
             except Exception as e:
                 pass
@@ -106,22 +116,13 @@ def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, sto
                 cost, ok = test_program(proc, work, targets, True)
 
                 if cost <= local_best_cost:
-                    if cost < local_best_cost:
-                        result_q.put((n_iterations, cost, work, ok))
-
-                        if cost == 0:
-                            print(f'cost is 0, {ok}, {len(work)}')
-                            break
-
-                        n_iterations = 0
-
                     local_best_cost = cost
+                    local_best_prog = copy_program(work)
+                    local_best_ok   = ok
 
                     program = work
 
                     miss = 0
-
-                    hit += 1
 
                 else:
                     miss += 1
@@ -133,14 +134,10 @@ def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, sto
 
                         program = proc.generate_program(random.randint(1, max_program_length))
 
-                    hit   = 0
-
             n_iterations += 1
 
     except Exception as e:
         print(f'Exception: {e}, line number: {e.__traceback__.tb_lineno}')
-
-    data_q.put(None)
 
     print('Process is terminating...')
 
@@ -164,40 +161,22 @@ if __name__ == "__main__":
                 { 'initial_values': [ { 'width' : 8, 'value' : 0 },
                                       { 'width' : 8, 'value' : 0 } ],
                   'result_acc': 0 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 3 },
-                                      { 'width' : 8, 'value' : 1 } ],
-                  'result_acc': 3 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 1 },
-                                      { 'width' : 8, 'value' : 3 } ],
-                  'result_acc': 3 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 3 },
-                                       { 'width' : 8, 'value' : 3 } ],
-                   'result_acc': 9 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 8 },
-                                       { 'width' : 8, 'value' : 8 } ],
-                   'result_acc': 64 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 19 },
-                                       { 'width' : 8, 'value' : 31 } ],
-                   'result_acc': 77 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 140 },
-                                       { 'width' : 8, 'value' : 202 } ],
-                   'result_acc': 120 },
-                { 'initial_values': [ { 'width' : 8, 'value' : 201 },
-                                       { 'width' : 8, 'value' : 153 } ],
-                   'result_acc': 33 },
         ]
 
-    stop_q: multiprocessing.Queue = multiprocessing.Queue()
-    data_q: multiprocessing.Queue = multiprocessing.Queue()
+    result_q: multiprocessing.Queue = multiprocessing.Queue()
 
     prev_now = 0
 
     start_ts = time.time()
 
     processes = []
+    cmd_qs    = []
 
     for tnr in range(0, n_processes):
-        proces = multiprocessing.Process(target=genetic_searcher, args=(instantiate_processor_obj, targets, max_program_length, max_n_miss, stop_q, data_q,))
+        cmd_q: multiprocessing.Queue = multiprocessing.Queue()
+        cmd_qs.append(cmd_q)
+
+        proces = multiprocessing.Process(target=genetic_searcher, args=(instantiate_processor_obj, targets, max_program_length, max_n_miss, cmd_q, result_q,))
         proces.start()
 
         processes.append(proces)
@@ -210,66 +189,58 @@ if __name__ == "__main__":
 
     first_output    = True
 
-    exit_count      = 0
-
-    equal_count     = 0
-
     while True:
-        result      = data_q.get()
+        one_ok     = False
 
-        if result == None:
-            exit_count += 1
+        any_change = False
 
-            if exit_count == len(processes):
-                break
+        for q in cmd_qs:
+            q.put('results')
 
-            continue
+            result      = result_q.get()
 
-        iterations += result[0]
+            iterations += result[0]
 
-        cost        = result[1]
+            cost        = result[1]
 
-        program     = result[2]
+            program     = result[2]
 
-        ok          = result[3]
+            ok          = result[3]
 
-        now         = time.time()
+            now         = time.time()
 
-        if (best_program is None) or cost < best_cost:
-            best_program    = program
-            best_cost       = cost
-            best_iterations = iterations
+            one_ok |= ok
 
-            t_diff = time.time() - start_ts
-            i_s = iterations / t_diff
-
-            print(f'time: {t_diff}, cost: {best_cost}, length: {len(best_program)}, iterations: {best_iterations}, i/s: {i_s:.2f}, {ok}')
-
-            print(equal_count)
-
-            equal_count = 0
-
-        elif cost == best_cost:
-            equal_count += 1
-
-            if equal_count > 1:
-                print(equal_count)
-
-            if len(program) < len(best_program):
+            if (best_program is None) or cost < best_cost:
                 best_program    = program
+                best_cost       = cost
                 best_iterations = iterations
 
                 t_diff = time.time() - start_ts
                 i_s = iterations / t_diff
 
-                print(f'time: {t_diff}, cost: {best_cost}, length: {len(best_program)}, iterations: {best_iterations}, current iterations: {iterations}, i/s: {i_s:.2f}')
+                print(f'time: {t_diff}, cost: {best_cost}, length: {len(best_program)}, iterations: {best_iterations}, i/s: {i_s:.2f}, {ok}')
+
+                any_change = True
+
+            elif cost == best_cost:
+                if len(program) < len(best_program):
+                    best_program    = program
+                    best_iterations = iterations
+
+                    any_change = True
+
+        t_diff = time.time() - start_ts
+        i_s = iterations / t_diff
+
+        print(f'time: {t_diff}, cost: {best_cost}, length: {len(best_program)}, iterations: {best_iterations}, current iterations: {iterations}, i/s: {i_s:.2f}')
+
+        if any_change == False and one_ok == True:
+            break
+
+        time.sleep(1)
 
     end_ts = time.time()
-
-    print('Finishing processes...')
-
-    for proces in processes:
-        stop_q.put('stop')
 
     proc = instantiate_processor_obj()
 
@@ -288,11 +259,14 @@ if __name__ == "__main__":
     else:
         print(f'Did not succeed in {iterations} iterations')
 
+    print('Finishing processes...')
+
+    for q in cmd_qs:
+        q.put('stop')
+
     print('Wait for the processes to stop...')
 
-    while True:
-        data_q.empty()
-        stop_q.empty()
+    for proces in multiprocessing.active_children():
+        proces.join(0.001)
 
-        for proces in multiprocessing.active_children():
-            proces.join(0.001)
+    print('Bye')
