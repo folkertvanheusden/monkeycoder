@@ -4,6 +4,7 @@ from processor import processor
 from processor_z80 import processor_z80
 from processor_test import processor_test
 import multiprocessing
+import os
 import random
 import sys
 import time
@@ -330,6 +331,13 @@ if __name__ == "__main__":
                 best_program    = program
                 best_cost       = cost
                 best_iterations = iterations
+
+                fh = open('__.tmp.dat', 'w')
+                for line in best_program:
+                    fh.write(f'{line["opcode"]}\n')
+                fh.close()
+
+                os.rename('__.tmp.dat', 'current.asm')
 
                 any_change = True
 
