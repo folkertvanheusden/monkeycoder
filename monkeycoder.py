@@ -25,7 +25,8 @@ max_n_miss             = max_program_length * 4  # 4 operation types (replace, a
 n_processes            = multiprocessing.cpu_count()
 
 def copy_program(program: List[dict]) -> List[dict]:
-    return program[:]
+    # return program[:]
+    return program.copy()
 
 # returns 0...x where 0 is perfect and x is bad
 def test_program(proc: processor, program: List[dict], targets: List[dict], full: bool) -> float:
