@@ -1,4 +1,5 @@
 from enum import Enum
+import json  # for hashing of registerset
 import random
 from typing import Callable, List, Optional, Tuple, TypedDict
 
@@ -43,6 +44,9 @@ class processor:
     def __init__(self) -> None:
         self.registers: processor.registers_dict = { }
         self.ram_size: int   = 0
+
+    def get_registers_hash(self) -> int:
+        return hash(json.dumps(self.registers, sort_keys=True))
 
     # allocate them
     def init_registers(self) -> None:
@@ -177,10 +181,27 @@ class processor:
         try:
             pc = 0
 
+            n_done = 0
+
+            history = set()
+
             while pc < len(program):
                 instruction = program[pc]
 
                 pc += 1
+
+                n_done += 1
+
+                # infinite loop detection
+                if n_done > len(program):  # allow a full run (no '>='!)
+                    hash_ = hash('f{self.get_registers_hash()} {pc}')
+
+                    if hash_ in history:
+                        return True
+
+                    history.add(hash_)
+
+                    n_done = 0
 
                 if instruction['instruction'] in [ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or, processor.Instruction.i_add_carry, processor.Instruction.i_sub_carry ]:
                     work_value:  int  = -1
