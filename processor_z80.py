@@ -73,7 +73,7 @@ class processor_z80(processor):
 
             instruction['instruction'] = sub_type
 
-            width = random.choice([8, 16]) if sub_type == processor.Instruction.i_add else 8
+            width = random.choice([8, 16]) if sub_type in [processor.Instruction.i_add, processor.Instruction.i_add_carry, processor.Instruction.i_sub_carry] else 8
 
             source1 = { 'type': processor.SourceType.st_reg, 'name': self.get_accumulator_name() }  # add a,b => a = a + b
             source2 = { 'type': processor.SourceType.st_reg, 'name': self.pick_a_register(width, None) } if random.choice([True, False]) or width == 16 else { 'type': processor.SourceType.st_val, 'value': random.randint(0, 255) }
@@ -102,13 +102,20 @@ class processor_z80(processor):
             instruction['destination']['name'] = self.pick_a_register(8, True)
 
             if random.randint(0, 1) == 0:
+                instruction['destination']['name'] = self.pick_a_register(8, True)
+
                 register = self.pick_a_register(8, True)
 
                 instruction['sources'] = [ { 'type': processor.SourceType.st_reg, 'name': register } ]
                 instruction['opcode'] = f"LD {instruction['destination']['name']}, {register}"
 
             else:
-                v = random.randint(0, 255)
+                width = random.choice([8, 16])
+
+                instruction['destination']['name'] = self.pick_a_register(width, True)
+
+                v = random.randint(0, 255) if width == 8 else random.randint(0, 65535)
+
                 instruction['sources'] = [ { 'type': processor.SourceType.st_val, 'value': v } ]
                 instruction['opcode'] = f"LD {instruction['destination']['name']}, {v}"
 
@@ -173,9 +180,11 @@ class processor_z80(processor):
     def _set_flags_add(self, dest, dest_value, mask):
         final_dest_value   = dest_value & mask
 
+        if self.registers[dest]['width'] == 8:
+            self.flag_zero     = final_dest_value == 0
+            self.flag_negative = False
+
         self.flag_carry    = (dest_value & (mask + 1)) != 0
-        self.flag_zero     = final_dest_value == 0
-        self.flag_negative = False
 
     def _set_flags_sub(self, dest, dest_value, mask):
         final_dest_value   = dest_value & mask
