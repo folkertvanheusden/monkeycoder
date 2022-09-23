@@ -23,6 +23,7 @@ max_program_length     = 512
 max_n_miss             = max_program_length * 4  # 4 operation types (replace, append, delete, insert)
 
 n_processes            = multiprocessing.cpu_count()
+print(f'Number of processes: {n_processes}')
 
 def copy_program(program: List[dict]) -> List[dict]:
     # return program[:]
@@ -49,7 +50,7 @@ def test_program(proc: processor, program: List[dict], targets: List[dict], full
 
     return 1. - float(n_targets_ok) / len(targets), n_targets_ok == len(targets)
 
-def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, cmd_q, result_q):
+def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss: int, cmd_q, result_q):
     try:
         proc = processor_obj()
 
@@ -105,18 +106,18 @@ def genetic_searcher(processor_obj, targets, max_program_length, max_n_miss, cmd
                 if action == 0:  # replace
                     work.pop(idx)
 
-                    for instruction in reversed(proc.pick_an_instruction()):
+                    for instruction in reversed(proc.pick_an_instruction(max_program_length)):
                         work.insert(idx, instruction)
 
                 elif action == 1:  # insert
-                    for instruction in reversed(proc.pick_an_instruction()):
+                    for instruction in reversed(proc.pick_an_instruction(max_program_length)):
                         work.insert(idx, instruction)
 
                 elif action == 2:  # delete
                     work.pop(idx)
 
                 elif action == 3:  # append
-                    for instruction in proc.pick_an_instruction():
+                    for instruction in proc.pick_an_instruction(max_program_length):
                         work.append(instruction)
 
                 elif action == 4:  # swap
@@ -227,6 +228,7 @@ def get_targets_multiply():
 
 if __name__ == "__main__":
     # verify if monkeycoder works
+    print('Verify...')
     proc = instantiate_processor_test()
 
     test_program_code, targets = proc.gen_test_program()
@@ -239,6 +241,7 @@ if __name__ == "__main__":
 
     assert n_targets_ok == len(targets)
 
+    print('Go!')
     targets = get_targets_multiply()
 
     result_q: multiprocessing.Queue = multiprocessing.Manager().Queue()

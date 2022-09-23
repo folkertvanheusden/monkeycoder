@@ -18,6 +18,10 @@ class processor:
         i_rot_circ_l = 13
         i_add_carry  = 14
         i_sub_carry  = 15
+        i_jump_c     = 16
+        i_jump_nc    = 17
+        i_jump_z     = 18
+        i_jump_nz    = 19
 
     class SourceType(Enum):
         st_reg = 1
@@ -76,7 +80,7 @@ class processor:
         program: list[dict] = []
 
         for nr in range(0, instruction_count):
-            for instruction in self.pick_an_instruction():
+            for instruction in self.pick_an_instruction(max_length):
                 program.append(instruction)
 
         return program
@@ -96,7 +100,7 @@ class processor:
     def get_program_init(self, initial_values: dict) -> List[dict]:
         assert False
 
-    def pick_an_instruction(self) -> dict:
+    def pick_an_instruction(self, max_length: int) -> dict:
         assert False
 
     def reset_ram(self) -> None:
@@ -171,7 +175,13 @@ class processor:
         self.reset_ram()
 
         try:
-            for instruction in program:
+            pc = 0
+
+            while pc < len(program):
+                instruction = program[pc]
+
+                pc += 1
+
                 if instruction['instruction'] in [ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or, processor.Instruction.i_add_carry, processor.Instruction.i_sub_carry ]:
                     work_value:  int  = -1
                     first_value: bool = True
@@ -331,6 +341,35 @@ class processor:
 
                 elif instruction['instruction'] == processor.Instruction.i_clear_carry:
                     self.flag_carry = False
+
+                elif instruction['instruction'] in [ processor.Instruction.i_jump_c, processor.Instruction.i_jump_nc, processor.Instruction.i_jump_z, processor.Instruction.i_jump_nz ]:
+                    if instruction['instruction'] == processor.Instruction.i_jump_c and self.flag_carry == False:
+                        continue
+
+                    if instruction['instruction'] == processor.Instruction.i_jump_nc and self.flag_carry == True:
+                        continue
+
+                    if instruction['instruction'] == processor.Instruction.i_jump_z and self.flag_zero == False:
+                        continue
+
+                    if instruction['instruction'] == processor.Instruction.i_jump_nz and self.flag_zero == True:
+                        continue
+
+                    if instruction['sources'][0]['type'] == processor.SourceType.st_reg:
+                        work_value = self.get_register_value(instruction['sources'][0]['name'])
+
+                    elif instruction['sources'][0]['type'] == processor.SourceType.st_val:
+                        work_value = instruction['sources'][0]['value']
+
+                    else:
+                        assert False
+
+                    # TODO by label, self.pc = work_value
+                    pc = work_value
+
+                    if pc >= len(program):
+                        # the program is incorrect, but the processing is fine!
+                        return True
 
                 else:
                     assert False
