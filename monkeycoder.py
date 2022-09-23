@@ -296,12 +296,14 @@ if __name__ == "__main__":
                 best_cost       = cost
                 best_iterations = iterations
 
-                fh = open('__.tmp.dat', 'w')
+                tmp_file = '__.tmp.dat.-'
+
+                fh = open(tmp_file, 'w')
                 for line in best_program:
                     fh.write(f'{line["opcode"]}\n')
                 fh.close()
 
-                os.rename('__.tmp.dat', 'current.asm')
+                os.rename(tmp_file, 'current.asm')
 
                 any_change = True
 
