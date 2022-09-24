@@ -404,6 +404,7 @@ class processor:
                     #elif:
                     #if instruction['sources'][0]['type'] == processor.SourceType.st_val:
 
+                    # this can happen when an instruction with a label gets deleted
                     if not instruction['destination_label'] in line_map:
                         # the program is incorrect, but the processing is fine!
                         return True
