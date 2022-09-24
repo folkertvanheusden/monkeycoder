@@ -89,7 +89,7 @@ class processor_z80(processor):
                     instruction['opcode'] = f"{self.instr_mapping[sub_type]} {instruction['destination']['name']}, {source2['name']}"
                 
                 elif source2['type'] == processor.SourceType.st_val:
-                    instruction['opcode'] = f"{self.instr_mapping[sub_type]} {instruction['destination']['name']}, ${source2['value']:02X}"
+                    instruction['opcode'] = f"{self.instr_mapping[sub_type]} {instruction['destination']['name']}, ${source2['value']:x}"
 
                 else:
                     assert False
@@ -119,7 +119,7 @@ class processor_z80(processor):
                     v = random.randint(0, 255) if width == 8 else random.randint(0, 65535)
 
                     instruction['sources'] = [ { 'type': processor.SourceType.st_val, 'value': v } ]
-                    instruction['opcode'] = f"LD {instruction['destination']['name']}, {v}"
+                    instruction['opcode'] = f"LD {instruction['destination']['name']}, ${v:x}"
 
                 instructions.append(instruction)
 
@@ -199,19 +199,19 @@ class processor_z80(processor):
 
                 if sub_instr_type == 0:
                     instr  = processor.Instruction.i_jump_c
-                    opcode = f'JP C, ${addr:04X}'
+                    opcode = f'JP C, ${addr:04x}'
 
                 elif sub_instr_type == 1:
                     instr  = processor.Instruction.i_jump_nc
-                    opcode = f'JP NC, ${addr:04X}'
+                    opcode = f'JP NC, ${addr:04x}'
 
                 elif sub_instr_type == 2:
                     instr  = processor.Instruction.i_jump_z
-                    opcode = f'JP Z, ${addr:04X}'
+                    opcode = f'JP Z, ${addr:04x}'
 
                 elif sub_instr_type == 3:
                     instr  = processor.Instruction.i_jump_nz
-                    opcode = f'JP NZ, ${addr:04X}'
+                    opcode = f'JP NZ, ${addr:04x}'
                 
                 else:
                     assert False
