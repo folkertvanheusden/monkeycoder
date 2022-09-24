@@ -1,3 +1,4 @@
+import logging
 from processor import processor
 import random
 from typing import List
@@ -62,173 +63,187 @@ class processor_z80(processor):
 
         return instructions
 
-    def pick_an_instruction(self, max_length: int) -> List[dict]:
+    def pick_an_instruction(self, program: dict, max_length: int) -> List[dict]:
         try:
-            instr_type = random.randint(0, 4)
-
             instructions: List[dict] = [ ]
 
-            instruction = { }
+            while len(instructions) == 0:
+                instr_type = random.randint(0, 4)
 
-            if instr_type == 0:
-                sub_type = random.choice([ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or, processor.Instruction.i_add_carry, processor.Instruction.i_sub_carry ])
+                instruction = { }
 
-                instruction['instruction'] = sub_type
+                if instr_type == 0:
+                    sub_type = random.choice([ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or, processor.Instruction.i_add_carry, processor.Instruction.i_sub_carry ])
 
-                width = random.choice([8, 16]) if sub_type in [processor.Instruction.i_add, processor.Instruction.i_add_carry, processor.Instruction.i_sub_carry] else 8
+                    instruction['instruction'] = sub_type
 
-                source1 = { 'type': processor.SourceType.st_reg, 'name': self.get_accumulator_name() }  # add a,b => a = a + b
-                source2 = { 'type': processor.SourceType.st_reg, 'name': self.pick_a_register(width, None) } if random.choice([True, False]) or width == 16 else { 'type': processor.SourceType.st_val, 'value': random.randint(0, 255) }
-                instruction['sources']     = [ source1, source2 ]
+                    width = random.choice([8, 16]) if sub_type in [processor.Instruction.i_add, processor.Instruction.i_add_carry, processor.Instruction.i_sub_carry] else 8
 
-                instruction['destination'] = {}
-                instruction['destination']['type'] = processor.DestinationType.dt_reg
-                instruction['destination']['name'] = 'A' if width == 8 else 'HL'
-
-                if source2['type'] == processor.SourceType.st_reg:
-                    instruction['opcode'] = f"{self.instr_mapping[sub_type]} {instruction['destination']['name']}, {source2['name']}"
-                
-                elif source2['type'] == processor.SourceType.st_val:
-                    instruction['opcode'] = f"{self.instr_mapping[sub_type]} {instruction['destination']['name']}, ${source2['value']:x}"
-
-                else:
-                    assert False
-
-                instructions.append(instruction)
-
-            elif instr_type == 1:
-                instruction['instruction'] = processor.Instruction.i_load
-
-                instruction['destination'] = {}
-                instruction['destination']['type'] = processor.DestinationType.dt_reg
-                instruction['destination']['name'] = self.pick_a_register(8, True)
-
-                if random.randint(0, 1) == 0:
-                    instruction['destination']['name'] = self.pick_a_register(8, True)
-
-                    register = self.pick_a_register(8, True)
-
-                    instruction['sources'] = [ { 'type': processor.SourceType.st_reg, 'name': register } ]
-                    instruction['opcode'] = f"LD {instruction['destination']['name']}, {register}"
-
-                else:
-                    width = random.choice([8, 16])
-
-                    instruction['destination']['name'] = self.pick_a_register(width, True)
-
-                    v = random.randint(0, 255) if width == 8 else random.randint(0, 65535)
-
-                    instruction['sources'] = [ { 'type': processor.SourceType.st_val, 'value': v } ]
-                    instruction['opcode'] = f"LD {instruction['destination']['name']}, ${v:x}"
-
-                instructions.append(instruction)
-
-            elif instr_type == 2:
-                sub_type = random.choice([0, 1, 2])
-
-                if sub_type == 0:
-                    instruction['instruction'] = processor.Instruction.i_shift_r
-                    instruction['shift_n']     = 1  # Z80 can only shift 1 bit at a time
+                    source1 = { 'type': processor.SourceType.st_reg, 'name': self.get_accumulator_name() }  # add a,b => a = a + b
+                    source2 = { 'type': processor.SourceType.st_reg, 'name': self.pick_a_register(width, None) } if random.choice([True, False]) or width == 16 else { 'type': processor.SourceType.st_val, 'value': random.randint(0, 255) }
+                    instruction['sources']     = [ source1, source2 ]
 
                     instruction['destination'] = {}
                     instruction['destination']['type'] = processor.DestinationType.dt_reg
-                    instruction['destination']['name'] = self.pick_a_register(8, True)
+                    instruction['destination']['name'] = 'A' if width == 8 else 'HL'
 
-                    instruction['opcode'] = f"SRL {instruction['destination']['name']}"
+                    if source2['type'] == processor.SourceType.st_reg:
+                        instruction['opcode'] = f"{self.instr_mapping[sub_type]} {instruction['destination']['name']}, {source2['name']}"
+                    
+                    elif source2['type'] == processor.SourceType.st_val:
+                        instruction['opcode'] = f"{self.instr_mapping[sub_type]} {instruction['destination']['name']}, ${source2['value']:x}"
 
-                elif sub_type == 1:
-                    instruction['instruction'] = processor.Instruction.i_rot_circ_r
-                    instruction['shift_n']     = 1  # Z80 can only shift 1 bit at a time
-
-                    instruction['destination'] = {}
-                    instruction['destination']['type'] = processor.DestinationType.dt_reg
-                    instruction['destination']['name'] = self.pick_a_register(8, True)
-
-                    instruction['opcode'] = f"RRC {instruction['destination']['name']}"
-
-                elif sub_type == 2:
-                    instruction['instruction'] = processor.Instruction.i_rot_circ_l
-                    instruction['shift_n']     = 1  # Z80 can only shift 1 bit at a time
-
-                    instruction['destination'] = {}
-                    instruction['destination']['type'] = processor.DestinationType.dt_reg
-                    instruction['destination']['name'] = self.pick_a_register(8, True)
-
-                    instruction['opcode'] = f"RLC {instruction['destination']['name']}"
-
-                else:
-                    assert False
-
-                instructions.append(instruction)
-
-            elif instr_type == 3:
-                sub_instr_type = random.choice([0, 1, 2])
-
-                if sub_instr_type == 0:  # set carry flag
-                    instruction['instruction'] = processor.Instruction.i_set_carry
-                    instruction['opcode'] = 'SCF'
+                    else:
+                        assert False
 
                     instructions.append(instruction)
 
-                elif sub_instr_type == 1:  # clear carry flag
-                    instruction1 = { }
-                    instruction1['instruction'] = processor.Instruction.i_set_carry
-                    instruction1['opcode'] = 'SCF'
+                elif instr_type == 1:
+                    instruction['instruction'] = processor.Instruction.i_load
 
-                    instructions.append(instruction1)
+                    instruction['destination'] = {}
+                    instruction['destination']['type'] = processor.DestinationType.dt_reg
+                    instruction['destination']['name'] = self.pick_a_register(8, True)
 
-                    instruction2 = { }
-                    instruction2['instruction'] = processor.Instruction.i_complement_carry
-                    instruction2['opcode'] = 'CCF'
+                    if random.randint(0, 1) == 0:
+                        instruction['destination']['name'] = self.pick_a_register(8, True)
 
-                    instructions.append(instruction2)
+                        register = self.pick_a_register(8, True)
 
-                elif sub_instr_type == 2:  # complement carry flag
-                    instruction['instruction'] = processor.Instruction.i_complement_carry
-                    instruction['opcode'] = 'CCF'
+                        instruction['sources'] = [ { 'type': processor.SourceType.st_reg, 'name': register } ]
+                        instruction['opcode'] = f"LD {instruction['destination']['name']}, {register}"
+
+                    else:
+                        width = random.choice([8, 16])
+
+                        instruction['destination']['name'] = self.pick_a_register(width, True)
+
+                        v = random.randint(0, 255) if width == 8 else random.randint(0, 65535)
+
+                        instruction['sources'] = [ { 'type': processor.SourceType.st_val, 'value': v } ]
+                        instruction['opcode'] = f"LD {instruction['destination']['name']}, ${v:x}"
 
                     instructions.append(instruction)
 
+                elif instr_type == 2:
+                    sub_type = random.choice([0, 1, 2])
+
+                    if sub_type == 0:
+                        instruction['instruction'] = processor.Instruction.i_shift_r
+                        instruction['shift_n']     = 1  # Z80 can only shift 1 bit at a time
+
+                        instruction['destination'] = {}
+                        instruction['destination']['type'] = processor.DestinationType.dt_reg
+                        instruction['destination']['name'] = self.pick_a_register(8, True)
+
+                        instruction['opcode'] = f"SRL {instruction['destination']['name']}"
+
+                    elif sub_type == 1:
+                        instruction['instruction'] = processor.Instruction.i_rot_circ_r
+                        instruction['shift_n']     = 1  # Z80 can only shift 1 bit at a time
+
+                        instruction['destination'] = {}
+                        instruction['destination']['type'] = processor.DestinationType.dt_reg
+                        instruction['destination']['name'] = self.pick_a_register(8, True)
+
+                        instruction['opcode'] = f"RRC {instruction['destination']['name']}"
+
+                    elif sub_type == 2:
+                        instruction['instruction'] = processor.Instruction.i_rot_circ_l
+                        instruction['shift_n']     = 1  # Z80 can only shift 1 bit at a time
+
+                        instruction['destination'] = {}
+                        instruction['destination']['type'] = processor.DestinationType.dt_reg
+                        instruction['destination']['name'] = self.pick_a_register(8, True)
+
+                        instruction['opcode'] = f"RLC {instruction['destination']['name']}"
+
+                    else:
+                        assert False
+
+                    instructions.append(instruction)
+
+                elif instr_type == 3:
+                    sub_instr_type = random.choice([0, 1, 2])
+
+                    if sub_instr_type == 0:  # set carry flag
+                        instruction['instruction'] = processor.Instruction.i_set_carry
+                        instruction['opcode'] = 'SCF'
+
+                        instructions.append(instruction)
+
+                    elif sub_instr_type == 1:  # clear carry flag
+                        instruction1 = { }
+                        instruction1['instruction'] = processor.Instruction.i_set_carry
+                        instruction1['opcode'] = 'SCF'
+
+                        instructions.append(instruction1)
+
+                        instruction2 = { }
+                        instruction2['instruction'] = processor.Instruction.i_complement_carry
+                        instruction2['opcode'] = 'CCF'
+
+                        instructions.append(instruction2)
+
+                    elif sub_instr_type == 2:  # complement carry flag
+                        instruction['instruction'] = processor.Instruction.i_complement_carry
+                        instruction['opcode'] = 'CCF'
+
+                        instructions.append(instruction)
+
+                    else:
+                        assert False
+
+                elif instr_type == 4:
+                    cur_prog_len = len(program['code'])
+
+                    if cur_prog_len > 0:
+                        sub_instr_type = random.choice([0, 1, 2, 3])
+
+                        addr = random.randint(0, cur_prog_len - 1) if cur_prog_len > 1 else 0
+
+                        if 'label' in program['code'][addr]:
+                            label = program['code'][addr]['label']
+
+                        else:
+                            label = f"l_{program['label_count']:04x}"
+
+                            program['label_count'] += 1
+
+                            program['code'][addr]['label'] = label
+
+                        if sub_instr_type == 0:
+                            instr  = processor.Instruction.i_jump_c
+                            opcode = f'JP C, {label}'
+
+                        elif sub_instr_type == 1:
+                            instr  = processor.Instruction.i_jump_nc
+                            opcode = f'JP NC, {label}'
+
+                        elif sub_instr_type == 2:
+                            instr  = processor.Instruction.i_jump_z
+                            opcode = f'JP Z, {label}'
+
+                        elif sub_instr_type == 3:
+                            instr  = processor.Instruction.i_jump_nz
+                            opcode = f'JP NZ, {label}'
+                        
+                        else:
+                            assert False
+
+                        instruction['instruction']       = instr
+                        instruction['destination_label'] = label
+                        instruction['opcode']            = opcode
+
+                        instructions.append(instruction)
+
                 else:
                     assert False
-
-            elif instr_type == 4:
-                sub_instr_type = random.choice([0, 1, 2, 3])
-
-                addr = random.randint(0, max_length - 1)
-
-                if sub_instr_type == 0:
-                    instr  = processor.Instruction.i_jump_c
-                    opcode = f'JP C, ${addr:04x}'
-
-                elif sub_instr_type == 1:
-                    instr  = processor.Instruction.i_jump_nc
-                    opcode = f'JP NC, ${addr:04x}'
-
-                elif sub_instr_type == 2:
-                    instr  = processor.Instruction.i_jump_z
-                    opcode = f'JP Z, ${addr:04x}'
-
-                elif sub_instr_type == 3:
-                    instr  = processor.Instruction.i_jump_nz
-                    opcode = f'JP NZ, ${addr:04x}'
-                
-                else:
-                    assert False
-
-                instruction['instruction'] = instr
-                instruction['sources']     = [ { 'type': processor.SourceType.st_val, 'value': addr } ]
-                instruction['opcode']      = opcode
-
-                instructions.append(instruction)
-
-            else:
-                assert False
 
             return instructions
 
         except Exception as e:
-            logging.error(f'Exception: {e}, line number: {e.__traceback__.tb_lineno}')
+            logging.error(f'Exception: {e}, line number: {e.__traceback__.tb_lineno} (processor_z80)')
 
     def _set_flags_add(self, dest, dest_value, mask):
         final_dest_value   = dest_value & mask

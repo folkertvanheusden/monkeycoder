@@ -1,5 +1,6 @@
 from enum import Enum
 import json  # for hashing of registerset
+import logging
 import random
 from typing import Callable, List, Optional, Tuple, TypedDict
 
@@ -81,11 +82,13 @@ class processor:
     def generate_program(self, max_length: int) -> List[dict]:
         instruction_count: int = random.randint(1, max_length)
 
-        program: list[dict] = []
+        code: list[dict] = []
+
+        program = { 'code': code, 'label_count': 0 }
 
         for nr in range(0, instruction_count):
-            for instruction in self.pick_an_instruction(max_length):
-                program.append(instruction)
+            for instruction in self.pick_an_instruction(program, max_length):
+                code.append(instruction)
 
         return program
 
@@ -104,7 +107,7 @@ class processor:
     def get_program_init(self, initial_values: dict) -> List[dict]:
         assert False
 
-    def pick_an_instruction(self, max_length: int) -> dict:
+    def pick_an_instruction(self, meta: dict, max_length: int) -> dict:
         assert False
 
     def reset_ram(self) -> None:
@@ -173,7 +176,18 @@ class processor:
     def _set_flags_logic(self, dest, dest_value, mask):
         assert False
 
-    def execute_program(self, initial_values: dict, program: dict) -> None:
+    def _generate_line_map(self, program: List[dict]) -> dict:
+        prog_len = len(program)
+
+        line_map = dict()
+
+        for pc in range(0, prog_len):
+            if 'label' in program[pc]:
+                line_map[program[pc]['label']] = pc
+
+        return line_map
+
+    def execute_program(self, initial_values: dict, program: List[dict]) -> None:
         self.reset_registers(initial_values)
 
         self.reset_ram()
@@ -182,6 +196,8 @@ class processor:
             pc = 0
 
             n_done = 0
+
+            line_map = None
 
             history = set()
 
@@ -364,6 +380,9 @@ class processor:
                     self.flag_carry = False
 
                 elif instruction['instruction'] in [ processor.Instruction.i_jump_c, processor.Instruction.i_jump_nc, processor.Instruction.i_jump_z, processor.Instruction.i_jump_nz ]:
+                    if line_map == None:
+                        line_map = self._generate_line_map(program)
+
                     if instruction['instruction'] == processor.Instruction.i_jump_c and self.flag_carry == False:
                         continue
 
@@ -376,21 +395,25 @@ class processor:
                     if instruction['instruction'] == processor.Instruction.i_jump_nz and self.flag_zero == True:
                         continue
 
-                    if instruction['sources'][0]['type'] == processor.SourceType.st_reg:
-                        work_value = self.get_register_value(instruction['sources'][0]['name'])
+#                    print(line_map)
+#                    print(instruction['destination_label'])
 
-                    elif instruction['sources'][0]['type'] == processor.SourceType.st_val:
-                        work_value = instruction['sources'][0]['value']
+                    # TODO
+                    # if instruction['sources'][0]['type'] == processor.SourceType.st_reg:
+                    #     work_value = self.get_register_value(instruction['sources'][0]['name'])
+                    #elif:
+                    #if instruction['sources'][0]['type'] == processor.SourceType.st_val:
 
-                    else:
-                        assert False
-
-                    # TODO by label, self.pc = work_value
-                    pc = work_value
-
-                    if pc >= len(program):
+                    if not instruction['destination_label'] in line_map:
                         # the program is incorrect, but the processing is fine!
                         return True
+
+                    work_value = line_map[instruction['destination_label']]
+
+                    #else:
+                    #    assert False
+
+                    pc = work_value
 
                 else:
                     assert False
@@ -398,7 +421,7 @@ class processor:
             return True
 
         except Exception as e:
-            logging.error(f'Exception: {e}, line number: {e.__traceback__.tb_lineno}')
+            logging.error(f'Exception: {e}, line number: {e.__traceback__.tb_lineno} (processor.py)')
 
         return False
 

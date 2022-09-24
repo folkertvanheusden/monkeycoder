@@ -62,7 +62,7 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
 
         start = time.time()
 
-        program = proc.generate_program(random.randint(1, max_program_length))
+        program_meta = proc.generate_program(random.randint(1, max_program_length))
 
         work = None
 
@@ -85,7 +85,7 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
             except Exception as e:
                 pass
 
-            work = copy_program(program)
+            work = copy_program(program_meta['code'])
 
             n_actions = random.randint(1, 8)
 
@@ -106,18 +106,18 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
                 if action == 0:  # replace
                     work.pop(idx)
 
-                    for instruction in reversed(proc.pick_an_instruction(len(work) + 1)):
+                    for instruction in reversed(proc.pick_an_instruction(program_meta, len(work) + 1)):
                         work.insert(idx, instruction)
 
                 elif action == 1:  # insert
-                    for instruction in reversed(proc.pick_an_instruction(len(work) + 1)):
+                    for instruction in reversed(proc.pick_an_instruction(program_meta, len(work) + 1)):
                         work.insert(idx, instruction)
 
                 elif action == 2:  # delete
                     work.pop(idx)
 
                 elif action == 3:  # append
-                    for instruction in proc.pick_an_instruction(len(work) + 1):
+                    for instruction in proc.pick_an_instruction(program_meta, len(work) + 1):
                         work.append(instruction)
 
                 elif action == 4:  # swap
@@ -137,7 +137,7 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
                     local_best_prog = copy_program(work)
                     local_best_ok   = ok
 
-                    program = work
+                    program_meta['code'] = work
 
                     miss = 0
 
@@ -149,7 +149,7 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
 
                         random.seed()
 
-                        program = proc.generate_program(random.randint(1, max_program_length))
+                        program_meta = proc.generate_program(random.randint(1, max_program_length))
 
             n_iterations += 1
 
@@ -333,7 +333,12 @@ if __name__ == "__main__":
 
                 fh = open(tmp_file, 'w')
                 for line in best_program:
-                    fh.write(f'{line["opcode"]}\n')
+                    if 'label' in line:
+                        fh.write(f'{line["label"]:8s}: {line["opcode"]}\n')
+
+                    else:
+                        fh.write(f'          {line["opcode"]}\n')
+
                 fh.close()
 
                 os.rename(tmp_file, 'current.asm')
