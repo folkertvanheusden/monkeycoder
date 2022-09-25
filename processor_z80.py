@@ -23,6 +23,8 @@ class processor_z80(processor):
         self.instr_mapping[processor.Instruction.i_shift_r   ] = 'SRL'
         self.instr_mapping[processor.Instruction.i_rot_circ_r] = 'RRC'
         self.instr_mapping[processor.Instruction.i_rot_circ_l] = 'RLC'
+        self.instr_mapping[processor.Instruction.i_inc       ] = 'INC'
+        self.instr_mapping[processor.Instruction.i_dec       ] = 'DEC'
 
     def init_registers(self) -> None:
         self.registers: processor.registers_dict = {}
@@ -68,7 +70,7 @@ class processor_z80(processor):
             instructions: List[dict] = [ ]
 
             while len(instructions) == 0:
-                instr_type = random.randint(0, 4)
+                instr_type = random.randint(0, 5)
 
                 instruction = { }
 
@@ -237,6 +239,21 @@ class processor_z80(processor):
 
                         instructions.append(instruction)
 
+                elif instr_type == 5:
+                    sub_instr_type = random.choice([0, 1])
+
+                    instruction['instruction'] = processor.Instruction.i_dec if sub_instr_type == 0 else processor.Instruction.i_inc
+
+                    width = random.choice([8, 16])
+
+                    instruction['destination'] = {}
+                    instruction['destination']['type'] = processor.DestinationType.dt_reg
+                    instruction['destination']['name'] = self.pick_a_register(width, None)
+
+                    instruction['opcode'] = f"{'DEC' if sub_instr_type == 0 else 'INC'} {instruction['destination']['name']}"
+
+                    instructions.append(instruction)
+
                 else:
                     assert False
 
@@ -245,24 +262,29 @@ class processor_z80(processor):
         except Exception as e:
             logging.error(f'Exception: {e}, line number: {e.__traceback__.tb_lineno} (processor_z80)')
 
-    def _set_flags_add(self, dest, dest_value, mask):
+    def _set_flags_add(self, instruction: processor.Instruction, dest, dest_value, mask):
         final_dest_value   = dest_value & mask
 
-        # ADD HL, HL/BC/DE/SP only affect the carry flag
-        if self.registers[dest]['width'] == 8:
-            self.flag_zero     = final_dest_value == 0
-            self.flag_negative = False
+        if instruction != processor.Instruction.i_add:
+            self.flag_zero = final_dest_value == 0
 
+        self.flag_negative = False
         self.flag_carry    = (dest_value & (mask + 1)) != 0
 
-    def _set_flags_sub(self, dest, dest_value, mask):
+    def _set_flags_inc_dec(self, instruction: processor.Instruction, dest, dest_value, mask):
+        final_dest_value   = dest_value & mask
+
+        self.flag_negative = False if instruction == processor.Instruction.i_inc else True
+        self.flag_zero     = final_dest_value == 0
+
+    def _set_flags_sub(self, instruction: processor.Instruction, dest, dest_value, mask):
         final_dest_value   = dest_value & mask
 
         self.flag_carry    = (dest_value & (mask + 1)) != 0
         self.flag_zero     = final_dest_value == 0
         self.flag_negative = True
 
-    def _set_flags_logic(self, dest, dest_value, mask):
+    def _set_flags_logic(self, instruction: processor.Instruction, dest, dest_value, mask):
         final_dest_value   = dest_value & mask
 
         self.flag_carry    = False

@@ -24,6 +24,8 @@ class processor:
         i_jump_nc    = 17
         i_jump_z     = 18
         i_jump_nz    = 19
+        i_dec        = 20
+        i_inc        = 21
 
     class SourceType(Enum):
         st_reg = 1
@@ -167,13 +169,16 @@ class processor:
 
             self.registers[reg_name]['value'] = value
 
-    def _set_flags_add(self, dest, dest_value, mask):
+    def _set_flags_add(self, instruction: Instruction, dest, dest_value, mask):
         assert False
 
-    def _set_flags_sub(self, dest, dest_value, mask):
+    def _set_flags_inc_dec(self, instruction: Instruction, dest, dest_value, mask):
         assert False
 
-    def _set_flags_logic(self, dest, dest_value, mask):
+    def _set_flags_sub(self, instruction: Instruction, dest, dest_value, mask):
+        assert False
+
+    def _set_flags_logic(self, instruction: Instruction, dest, dest_value, mask):
         assert False
 
     def _generate_line_map(self, program: List[dict]) -> dict:
@@ -275,19 +280,19 @@ class processor:
                     assert first_value == False
 
                     if instruction['instruction'] in [processor.Instruction.i_add, processor.Instruction.i_add_carry]:
-                        self._set_flags_add(instruction['destination']['name'], work_value, mask)
+                        self._set_flags_add(instruction['instruction'], instruction['destination']['name'], work_value, mask)
 
                     elif instruction['instruction'] in [processor.Instruction.i_sub, processor.Instruction.i_sub_carry]:
-                        self._set_flags_sub(instruction['destination']['name'], work_value, mask)
+                        self._set_flags_sub(instruction['instruction'], instruction['destination']['name'], work_value, mask)
 
                     elif instruction['instruction'] == processor.Instruction.i_xor:
-                        self._set_flags_logic(instruction['destination']['name'], work_value, mask)
+                        self._set_flags_logic(instruction['instruction'], instruction['destination']['name'], work_value, mask)
 
                     elif instruction['instruction'] == processor.Instruction.i_and:
-                        self._set_flags_logic(instruction['destination']['name'], work_value, mask)
+                        self._set_flags_logic(instruction['instruction'], instruction['destination']['name'], work_value, mask)
 
                     elif instruction['instruction'] == processor.Instruction.i_or:
-                        self._set_flags_logic(instruction['destination']['name'], work_value, mask)
+                        self._set_flags_logic(instruction['instruction'], instruction['destination']['name'], work_value, mask)
 
                     if instruction['destination']['type'] == processor.DestinationType.dt_reg:
                         work_value &= mask
@@ -415,6 +420,19 @@ class processor:
                     #    assert False
 
                     pc = work_value
+
+                elif instruction['instruction'] in [processor.Instruction.i_dec, processor.Instruction.i_inc]:
+                    register = instruction['destination']['name']
+
+                    work_value = self.get_register_value(register)
+
+                    work_value += 1 if instruction['instruction'] == processor.Instruction.i_inc else -1
+
+                    self._set_flags_inc_dec(instruction['instruction'], register, work_value, processor.masks[self.registers[register]['width']])
+
+                    work_value &= processor.masks[self.registers[register]['width']]
+
+                    self.set_register_value(register, work_value)
 
                 else:
                     assert False
