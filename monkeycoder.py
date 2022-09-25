@@ -52,23 +52,23 @@ def test_program(proc: processor, program: List[dict], targets: List[dict], full
 
 def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss: int, cmd_q, result_q):
     try:
-        proc = processor_obj()
-
         local_best_cost = 1000000
 
         local_best_prog = None
 
         local_best_ok   = False
 
-        start = time.time()
+        proc         = processor_obj()
+
+        start        = time.time()
 
         program_meta = proc.generate_program(random.randint(1, max_program_length))
 
-        work = None
+        work         = None
 
         n_iterations = 0
 
-        miss = 0
+        miss         = 0
 
         while True:
             try:
@@ -85,7 +85,7 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
             except Exception as e:
                 pass
 
-            work = copy_program(program_meta['code'])
+            work      = copy_program(program_meta['code'])
 
             work_meta = { 'code': work, 'label_count': program_meta['label_count'] }
 
@@ -94,7 +94,7 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
             for i in range(0, n_actions):
                 len_work = len(work)
 
-                idx = random.randint(0, len_work - 1) if len_work > 1 else 0
+                idx      = random.randint(0, len_work - 1) if len_work > 1 else 0
 
                 if len_work == 0:
                     action = 3
@@ -348,7 +348,7 @@ if __name__ == "__main__":
                 fh = open(tmp_file, 'w')
                 for line in best_program:
                     if 'label' in line:
-                        fh.write(f'{line["label"]:8s}: {line["opcode"]}\n')
+                        fh.write(f'{line["label"] + ":":8s} {line["opcode"]}\n')
 
                     else:
                         fh.write(f'          {line["opcode"]}\n')
