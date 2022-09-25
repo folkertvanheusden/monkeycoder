@@ -248,6 +248,7 @@ class processor_z80(processor):
     def _set_flags_add(self, dest, dest_value, mask):
         final_dest_value   = dest_value & mask
 
+        # ADD HL, HL/BC/DE/SP only affect the carry flag
         if self.registers[dest]['width'] == 8:
             self.flag_zero     = final_dest_value == 0
             self.flag_negative = False
