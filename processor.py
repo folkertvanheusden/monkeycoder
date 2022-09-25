@@ -181,7 +181,7 @@ class processor:
     def _set_flags_logic(self, instruction: Instruction, dest, dest_value, mask):
         assert False
 
-    def _generate_line_map(self, program: List[dict]) -> dict:
+    def generate_line_map(program: List[dict]) -> dict:
         prog_len = len(program)
 
         line_map = dict()
@@ -386,7 +386,12 @@ class processor:
 
                 elif instruction['instruction'] in [ processor.Instruction.i_jump_c, processor.Instruction.i_jump_nc, processor.Instruction.i_jump_z, processor.Instruction.i_jump_nz ]:
                     if line_map == None:
-                        line_map = self._generate_line_map(program)
+                        line_map = processor.generate_line_map(program)
+
+                    # this can happen when an instruction with a label gets deleted
+                    if not instruction['destination_label'] in line_map:
+                        # the program is incorrect, but the processing is fine!
+                        return True
 
                     if instruction['instruction'] == processor.Instruction.i_jump_c and self.flag_carry == False:
                         continue
@@ -408,11 +413,6 @@ class processor:
                     #     work_value = self.get_register_value(instruction['sources'][0]['name'])
                     #elif:
                     #if instruction['sources'][0]['type'] == processor.SourceType.st_val:
-
-                    # this can happen when an instruction with a label gets deleted
-                    if not instruction['destination_label'] in line_map:
-                        # the program is incorrect, but the processing is fine!
-                        return True
 
                     work_value = line_map[instruction['destination_label']]
 

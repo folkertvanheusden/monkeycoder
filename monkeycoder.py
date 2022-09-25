@@ -87,6 +87,8 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
 
             work = copy_program(program_meta['code'])
 
+            work_meta = { 'code': work, 'label_count': program_meta['label_count'] }
+
             n_actions = random.randint(1, 8)
 
             for i in range(0, n_actions):
@@ -106,18 +108,18 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
                 if action == 0:  # replace
                     work.pop(idx)
 
-                    for instruction in reversed(proc.pick_an_instruction(program_meta, len(work) + 1)):
+                    for instruction in reversed(proc.pick_an_instruction(work_meta, len(work) + 1)):
                         work.insert(idx, instruction)
 
                 elif action == 1:  # insert
-                    for instruction in reversed(proc.pick_an_instruction(program_meta, len(work) + 1)):
+                    for instruction in reversed(proc.pick_an_instruction(work_meta, len(work) + 1)):
                         work.insert(idx, instruction)
 
                 elif action == 2:  # delete
                     work.pop(idx)
 
                 elif action == 3:  # append
-                    for instruction in proc.pick_an_instruction(program_meta, len(work) + 1):
+                    for instruction in proc.pick_an_instruction(work_meta, len(work) + 1):
                         work.append(instruction)
 
                 elif action == 4:  # swap
@@ -128,6 +130,18 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
 
                 else:
                     assert False
+
+            if len(work) > 0:
+                line_map = processor.generate_line_map(work)
+
+                i = 0
+
+                while i < len(work):
+                    if 'destination_label' in work[i] and not work[i]['destination_label'] in line_map:
+                        work.pop(i)
+
+                    else:
+                        i += 1
 
             if len(work) > 0:
                 cost, ok = test_program(proc, work, targets, True)
