@@ -151,15 +151,15 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
                     local_best_prog = copy_program(work)
                     local_best_ok   = ok
 
-                    program_meta['code'] = work
+                    program_meta    = work_meta
 
-                    miss = 0
+                    miss            = 0
 
                 else:
-                    miss += 1
+                    miss           += 1
 
                     if miss >= max_n_miss:
-                        miss = 0
+                        miss         = 0
 
                         random.seed()
 
