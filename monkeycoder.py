@@ -309,7 +309,7 @@ if __name__ == "__main__":
     assert n_targets_ok == len(targets)
 
     logging.info('Go!')
-    targets = get_targets_shift_1()
+    targets = get_targets_shift_n()
 
     result_q: queue.Queue[Any] = multiprocessing.Manager().Queue()
 
@@ -436,9 +436,9 @@ if __name__ == "__main__":
     for q in cmd_qs:
         q.put('stop')
 
-    logging.info('Wait for the processes to stop...')
+    logging.info(f'Wait for {len(processes)} processes to stop...')
 
-    for proc in multiprocessing.active_children():
-        proc.join()
+    for p in processes:
+        p.join()
 
     logging.info('Bye')
