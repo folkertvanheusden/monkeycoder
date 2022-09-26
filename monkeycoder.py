@@ -286,6 +286,28 @@ def clean_labels(code):
 
     logging.debug(f'Removed {n_removed} obsolete labels')
 
+def clean_instructions(code, targets):
+    try:
+        proc         = processor_obj()
+
+        i = 0
+
+        while i < len(code):
+            work = copy.deepcopy(code)
+
+            work.pop(i)
+
+            cost, ok = test_program(proc, work, targets, False)
+
+            if ok:
+                code = work
+
+            else:
+                i += 1
+
+    except Exception as e:
+        logging.error(f'Exception: {e}, line number: {e.__traceback__.tb_lineno}')
+
 if __name__ == "__main__":
     logging.basicConfig(filename='monkeycoder.log', encoding='utf-8', level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
 
@@ -415,6 +437,8 @@ if __name__ == "__main__":
         time.sleep(5)
 
     end_ts = time.time()
+
+    clean_instructions(best_program, targets)
 
     clean_labels(best_program)
 
