@@ -56,12 +56,14 @@ def test_program(proc: processor, program: List[dict], targets: List[dict], full
         if proc.get_accumulator() == target['result_acc']:
             n_targets_ok += 1
 
+    all_ok = n_targets_ok == len(targets)
+
     if full:
         mul = 1 / len(targets)
 
-        return 11. - (float(n_targets_ok) * mul * 10 - float(len(program)) / max_program_length * mul), n_targets_ok == len(targets)
+        return 21. - (float(n_targets_ok) * mul * 10 - float(len(program)) / max_program_length * mul + all_ok * 10), all_ok
 
-    return 1. - float(n_targets_ok) / len(targets), n_targets_ok == len(targets)
+    return 2. - (float(n_targets_ok) / len(targets) + all_ok), all_ok
 
 def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss: int, cmd_q, result_q):
     try:
@@ -309,7 +311,7 @@ if __name__ == "__main__":
     assert n_targets_ok == len(targets)
 
     logging.info('Go!')
-    targets = get_targets_shift_n()
+    targets = get_targets_shift_loop()
 
     result_q: queue.Queue[Any] = multiprocessing.Manager().Queue()
 
@@ -424,6 +426,8 @@ if __name__ == "__main__":
         diff_ts = end_ts - start_ts
 
         logging.info(f'Iterations: {best_iterations}, length program: {len(best_program)}, took: {diff_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second')
+
+        emit_program(best_program)
 
         for instruction in best_program:
             logging.info(instruction['opcode'])
