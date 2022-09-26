@@ -83,6 +83,8 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
 
         n_iterations = 0
 
+        n_regenerate = 0
+
         miss         = 0
 
         while True:
@@ -90,9 +92,11 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
                 cmd = cmd_q.get_nowait()
 
                 if cmd == 'results':
-                    result_q.put((n_iterations, local_best_cost, local_best_prog, local_best_ok))
+                    result_q.put((n_iterations, local_best_cost, local_best_prog, local_best_ok, n_regenerate))
 
                     n_iterations = 0
+
+                    n_regenerate = 0
 
                 elif cmd == 'stop':
                     break
@@ -179,6 +183,8 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
                         random.seed()
 
                         program_meta = proc.generate_program(random.randint(1, max_program_length))
+
+                        n_regenerate += 1
 
             n_iterations += 1
 
@@ -300,7 +306,9 @@ if __name__ == "__main__":
 
         processes.append(proces)
 
-    iterations = 0
+    iterations      = 0
+
+    n_regenerate    = 0
 
     best_program    = None
     best_cost       = 1000000
@@ -316,24 +324,27 @@ if __name__ == "__main__":
         any_change  = False
 
         batch_it    = 0
+        b_n_regen   = 0
 
         for q in cmd_qs:
             q.put('results')
 
-            result      = result_q.get()
+            result        = result_q.get()
 
-            batch_it   += result[0]
+            batch_it     += result[0]
 
-            cost        = result[1]
+            cost          = result[1]
 
-            program     = result[2]
+            program       = result[2]
 
             if program is None:
                 continue
 
-            ok          = result[3]
+            ok            = result[3]
 
-            now         = time.time()
+            b_n_regen    += result[4]
+
+            now           = time.time()
 
             one_ok |= ok
 
@@ -360,14 +371,16 @@ if __name__ == "__main__":
             if write_file:
                 emit_program(best_program)
 
-        iterations += batch_it
+        iterations   += batch_it
+
+        n_regenerate += b_n_regen
 
         now    = time.time()
         t_diff = now - start_ts
         i_s    = iterations / t_diff
 
         if best_program != None:
-            logging.info(f'dt: {t_diff:6.3f}, cost: {best_cost:.6f}, length: {len(best_program):3d}, #it: {best_iterations}, cur.#it: {iterations}, i/s: {i_s:.2f}, cur i/s: {batch_it / (now - prev_ts):.2f}, ok: {one_ok}')
+            logging.info(f'dt: {t_diff:6.3f}, cost: {best_cost:.6f}, length: {len(best_program):3d}, #it: {best_iterations}, cur.#it: {iterations}, i/s: {i_s:.2f}, cur i/s: {batch_it / (now - prev_ts):.2f}, ok: {one_ok}, #regen: {b_n_regen}')
 
         if any_change == False and one_ok == True:
             break
