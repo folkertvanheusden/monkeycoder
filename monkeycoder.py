@@ -3,13 +3,15 @@
 from processor import processor
 from processor_z80 import processor_z80
 from processor_test import processor_test
+import copy
 import logging
 import multiprocessing
 import os
+import queue
 import random
 import sys
 import time
-from typing import List
+from typing import Any, List, Tuple
 
 def instantiate_processor_z80():
     return processor_z80()
@@ -25,12 +27,23 @@ max_n_miss             = max_program_length * 4  # 4 operation types (replace, a
 
 n_processes            = multiprocessing.cpu_count()
 
-def copy_program(program: List[dict]) -> List[dict]:
-    # return program[:]
-    return program.copy()
+def emit_program(best_program):
+    tmp_file = '__.tmp.dat.-'
+
+    fh = open(tmp_file, 'w')
+    for line in best_program:
+        if 'label' in line:
+            fh.write(f'{line["label"] + ":":8s} {line["opcode"]}\n')
+
+        else:
+            fh.write(f'          {line["opcode"]}\n')
+
+    fh.close()
+
+    os.rename(tmp_file, 'current.asm')
 
 # returns 0...x where 0 is perfect and x is bad
-def test_program(proc: processor, program: List[dict], targets: List[dict], full: bool) -> float:
+def test_program(proc: processor, program: List[dict], targets: List[dict], full: bool) -> Tuple[float, bool]:
     n_targets_ok = 0
 
     for target in targets:
@@ -52,7 +65,7 @@ def test_program(proc: processor, program: List[dict], targets: List[dict], full
 
 def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss: int, cmd_q, result_q):
     try:
-        local_best_cost = 1000000
+        local_best_cost = 1000000.
 
         local_best_prog = None
 
@@ -61,6 +74,8 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
         proc         = processor_obj()
 
         start        = time.time()
+
+        random.seed()
 
         program_meta = proc.generate_program(random.randint(1, max_program_length))
 
@@ -85,9 +100,9 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
             except Exception as e:
                 pass
 
-            work      = copy_program(program_meta['code'])
+            work_meta = copy.deepcopy(program_meta)
 
-            work_meta = { 'code': work, 'label_count': program_meta['label_count'] }
+            work      = work_meta['code']
 
             n_actions = random.randint(1, 8)
 
@@ -148,10 +163,10 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
                 
                 if cost <= local_best_cost:
                     local_best_cost = cost
-                    local_best_prog = copy_program(work)
+                    local_best_prog = copy.deepcopy(work)
                     local_best_ok   = ok
 
-                    program_meta    = work_meta
+                    program_meta    = copy.deepcopy(work_meta)
 
                     miss            = 0
 
@@ -267,7 +282,7 @@ if __name__ == "__main__":
     logging.info('Go!')
     targets = get_targets_shift_loop()
 
-    result_q: multiprocessing.Queue = multiprocessing.Manager().Queue()
+    result_q: queue.Queue[Any] = multiprocessing.Manager().Queue()
 
     prev_now = 0
 
@@ -277,7 +292,7 @@ if __name__ == "__main__":
     cmd_qs    = []
 
     for tnr in range(0, n_processes):
-        cmd_q: multiprocessing.Queue = multiprocessing.Manager().Queue()
+        cmd_q: queue.Queue[Any] = multiprocessing.Manager().Queue()
         cmd_qs.append(cmd_q)
 
         proces = multiprocessing.Process(target=genetic_searcher, args=(instantiate_processor_obj, targets, max_program_length, max_n_miss, cmd_q, result_q,))
@@ -343,19 +358,7 @@ if __name__ == "__main__":
                     write_file = True
 
             if write_file:
-                tmp_file = '__.tmp.dat.-'
-
-                fh = open(tmp_file, 'w')
-                for line in best_program:
-                    if 'label' in line:
-                        fh.write(f'{line["label"] + ":":8s} {line["opcode"]}\n')
-
-                    else:
-                        fh.write(f'          {line["opcode"]}\n')
-
-                fh.close()
-
-                os.rename(tmp_file, 'current.asm')
+                emit_program(best_program)
 
         iterations += batch_it
 
@@ -397,7 +400,7 @@ if __name__ == "__main__":
 
     logging.info('Wait for the processes to stop...')
 
-    for proces in multiprocessing.active_children():
-        proces.join()
+    for proc in multiprocessing.active_children():
+        proc.join()
 
     logging.info('Bye')

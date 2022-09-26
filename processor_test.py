@@ -22,6 +22,6 @@ class processor_test(processor_z80):
 
     def init_registers(self) -> None:
         self.registers: dict = {}
-        self.registers['A'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
-        self.registers['B'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
-        self.registers['C'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
+        self.registers['A'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True, 'pair': None }
+        self.registers['B'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True, 'pair': None }
+        self.registers['C'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True, 'pair': None }

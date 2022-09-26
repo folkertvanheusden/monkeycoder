@@ -1,7 +1,7 @@
 import logging
 from processor import processor
 import random
-from typing import List
+from typing import Dict, List
 
 class processor_z80(processor):
     def __init__(self):
@@ -27,25 +27,26 @@ class processor_z80(processor):
         self.instr_mapping[processor.Instruction.i_dec       ] = 'DEC'
 
     def init_registers(self) -> None:
-        self.registers: processor.registers_dict = {}
-        self.registers['A'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
-        self.registers['B'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
-        self.registers['C'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
-        self.registers['D'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
-        self.registers['E'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
-        self.registers['H'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
-        self.registers['L'] = { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'dest_allowed': True }
-        self.registers['HL'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set_': False, 'pair': ['H', 'L'], 'dest_allowed': True }
-        self.registers['BC'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set_': False, 'pair': ['B', 'C'], 'dest_allowed': False }
-        self.registers['DE'] = { 'width': 16, 'value': 0, 'ivalue' : None, 'set_': False, 'pair': ['D', 'E'], 'dest_allowed': False }
+        self.registers: Dict[str, processor.registers_dict] = {
+                'A': { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'pair': None, 'dest_allowed': True },
+                'B': { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'pair': None, 'dest_allowed': True },
+                'C': { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'pair': None, 'dest_allowed': True },
+                'D': { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'pair': None, 'dest_allowed': True },
+                'E': { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'pair': None, 'dest_allowed': True },
+                'H': { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'pair': None, 'dest_allowed': True },
+                'L': { 'width': 8, 'value': 0, 'ivalue' : None, 'set_': False, 'pair': None, 'dest_allowed': True },
+                'HL': { 'width': 16, 'value': 0, 'ivalue' : None, 'set_': False, 'pair': ['H', 'L'], 'dest_allowed': True  },
+                'BC': { 'width': 16, 'value': 0, 'ivalue' : None, 'set_': False, 'pair': ['B', 'C'], 'dest_allowed': False },
+                'DE': { 'width': 16, 'value': 0, 'ivalue' : None, 'set_': False, 'pair': ['D', 'E'], 'dest_allowed': False }
+            }
 
     def get_program_init(self, initial_values: dict) -> List[dict]:
         self.reset_registers(initial_values)
 
-        instructions = []
+        instructions: List[dict] = []
 
         for register in self.registers:
-            is_pair = 'pair' in self.registers[register]
+            is_pair = self.registers[register]['pair'] != None
             if is_pair:
                 continue
 
@@ -70,9 +71,9 @@ class processor_z80(processor):
             instructions: List[dict] = [ ]
 
             while len(instructions) == 0:
-                instr_type = random.randint(0, 5)
+                instr_type: int = random.randint(0, 5)
 
-                instruction = { }
+                instruction: dict = { }
 
                 if instr_type == 0:
                     sub_type = random.choice([ processor.Instruction.i_add, processor.Instruction.i_sub, processor.Instruction.i_xor, processor.Instruction.i_and, processor.Instruction.i_or, processor.Instruction.i_add_carry, processor.Instruction.i_sub_carry ])
@@ -128,9 +129,9 @@ class processor_z80(processor):
                     instructions.append(instruction)
 
                 elif instr_type == 2:
-                    sub_type = random.choice([0, 1, 2])
+                    sub_instr_type = random.choice([0, 1, 2])
 
-                    if sub_type == 0:
+                    if sub_instr_type == 0:
                         instruction['instruction'] = processor.Instruction.i_shift_r
                         instruction['shift_n']     = 1  # Z80 can only shift 1 bit at a time
 
@@ -140,7 +141,7 @@ class processor_z80(processor):
 
                         instruction['opcode'] = f"SRL {instruction['destination']['name']}"
 
-                    elif sub_type == 1:
+                    elif sub_instr_type == 1:
                         instruction['instruction'] = processor.Instruction.i_rot_circ_r
                         instruction['shift_n']     = 1  # Z80 can only shift 1 bit at a time
 
@@ -150,7 +151,7 @@ class processor_z80(processor):
 
                         instruction['opcode'] = f"RRC {instruction['destination']['name']}"
 
-                    elif sub_type == 2:
+                    elif sub_instr_type == 2:
                         instruction['instruction'] = processor.Instruction.i_rot_circ_l
                         instruction['shift_n']     = 1  # Z80 can only shift 1 bit at a time
 
@@ -261,6 +262,8 @@ class processor_z80(processor):
 
         except Exception as e:
             logging.error(f'Exception: {e}, line number: {e.__traceback__.tb_lineno} (processor_z80)')
+
+        assert False
 
     def _set_flags_add(self, instruction: processor.Instruction, dest, dest_value, mask):
         final_dest_value   = dest_value & mask

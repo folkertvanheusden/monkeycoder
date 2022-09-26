@@ -38,15 +38,16 @@ class processor:
     class registers_dict(TypedDict):
         width : int
         value : int
-        ivalue: int
-        name  : str
+        ivalue: Optional[int]
         set_  : bool
+        pair  : Optional[List[str]]
+        dest_allowed: bool
 
     masks = { 8: 255, 16: 65535 }
 
     def __init__(self) -> None:
-        self.registers: processor.registers_dict = { }
-        self.ram_size: int   = 0
+        self.registers: Dict[str, processor.registers_dict] = dict()
+        self.ram_size: int = 0
 
     def get_registers_hash(self) -> int:
         return hash(json.dumps(self.registers, sort_keys=True))
@@ -70,7 +71,7 @@ class processor:
                     self.registers[r]['value']  = iv['value']
                     self.registers[r]['ivalue'] = iv['value']
 
-                    self.registers[r]['set_']    = True
+                    self.registers[r]['set_']   = True
 
                     reg_found = True
                     break
@@ -81,7 +82,7 @@ class processor:
         self.flag_zero     = False
         self.flag_negative = False
 
-    def generate_program(self, max_length: int) -> List[dict]:
+    def generate_program(self, max_length: int) -> dict:
         instruction_count: int = random.randint(1, max_length)
 
         code: list[dict] = []
@@ -94,7 +95,7 @@ class processor:
 
         return program
 
-    def pick_a_register(self, width: int, can_be_destination: Optional[bool]) -> dict:
+    def pick_a_register(self, width: int, can_be_destination: Optional[bool]) -> str:
         while True:
             register = random.choice(list(self.registers))
 
@@ -109,7 +110,7 @@ class processor:
     def get_program_init(self, initial_values: dict) -> List[dict]:
         assert False
 
-    def pick_an_instruction(self, meta: dict, max_length: int) -> dict:
+    def pick_an_instruction(self, meta: dict, max_length: int) -> List[dict]:
         assert False
 
     def reset_ram(self) -> None:
@@ -123,7 +124,7 @@ class processor:
         return self.get_register_value(self.get_accumulator_name())
 
     def get_register_value(self, reg_name: str) -> int:
-        is_pair = 'pair' in self.registers[reg_name]
+        is_pair = self.registers[reg_name]['pair'] != None
 
         if is_pair:
             value = 0
@@ -152,7 +153,7 @@ class processor:
     def set_register_value(self, reg_name: str, value: int) -> None:
         assert value != None
 
-        is_pair = 'pair' in self.registers[reg_name]
+        is_pair = self.registers[reg_name]['pair'] != None
 
         if is_pair:
             assert value >= 0
@@ -181,6 +182,7 @@ class processor:
     def _set_flags_logic(self, instruction: Instruction, dest, dest_value, mask):
         assert False
 
+    @staticmethod
     def generate_line_map(program: List[dict]) -> dict:
         prog_len = len(program)
 
@@ -192,7 +194,7 @@ class processor:
 
         return line_map
 
-    def execute_program(self, initial_values: dict, program: List[dict]) -> None:
+    def execute_program(self, initial_values: dict, program: List[dict]) -> bool:
         self.reset_registers(initial_values)
 
         self.reset_ram()
@@ -331,7 +333,7 @@ class processor:
                     if instruction['shift_n'] > 0:
                         work_value >>= instruction['shift_n'] - 1
 
-                        self.flag_carry = work_value & 1
+                        self.flag_carry = True if work_value & 1 else False
 
                         work_value >>= 1
 
@@ -347,7 +349,7 @@ class processor:
                     for i in range(0, instruction['shift_n']):
                         old_0 = work_value & 1
 
-                        self.flag_carry = old_0
+                        self.flag_carry = True if old_0 else False
 
                         work_value >>= 1
 
