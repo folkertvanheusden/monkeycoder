@@ -27,7 +27,7 @@ max_n_miss             = max_program_length * 4  # 4 operation types (replace, a
 
 n_processes            = multiprocessing.cpu_count()
 
-def emit_program(best_program):
+def emit_program(best_program, name):
     tmp_file = '__.tmp.dat.-'
 
     fh = open(tmp_file, 'w')
@@ -40,7 +40,7 @@ def emit_program(best_program):
 
     fh.close()
 
-    os.rename(tmp_file, 'current.asm')
+    os.rename(tmp_file, name)
 
 # returns 0...x where 0 is perfect and x is bad
 def test_program(proc: processor, program: List[dict], targets: List[dict], full: bool) -> Tuple[float, bool]:
@@ -286,11 +286,12 @@ def clean_labels(code):
 
     logging.debug(f'Removed {n_removed} obsolete labels')
 
-def clean_instructions(code, targets):
+def clean_instructions(processor_obj, code, targets):
     try:
         proc         = processor_obj()
 
-        i = 0
+        i     = 0
+        n_del = 0
 
         while i < len(code):
             work = copy.deepcopy(code)
@@ -300,13 +301,21 @@ def clean_instructions(code, targets):
             cost, ok = test_program(proc, work, targets, False)
 
             if ok:
-                code = work
+                code   = work
+
+                n_del += 1
 
             else:
-                i += 1
+                i     += 1
+
+        logging.info(f'Deleted {n_del} redundant instructions')
+
+        return code
 
     except Exception as e:
         logging.error(f'Exception: {e}, line number: {e.__traceback__.tb_lineno}')
+
+    return None
 
 if __name__ == "__main__":
     logging.basicConfig(filename='monkeycoder.log', encoding='utf-8', level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
@@ -333,6 +342,7 @@ if __name__ == "__main__":
     assert n_targets_ok == len(targets)
 
     logging.info('Go!')
+
     targets = get_targets_shift_loop()
 
     result_q: queue.Queue[Any] = multiprocessing.Manager().Queue()
@@ -416,7 +426,7 @@ if __name__ == "__main__":
                     write_file = True
 
             if write_file:
-                emit_program(best_program)
+                emit_program(best_program, 'current.asm')
 
         iterations   += batch_it
 
@@ -438,9 +448,13 @@ if __name__ == "__main__":
 
     end_ts = time.time()
 
-    clean_instructions(best_program, targets)
+    best_program = clean_instructions(instantiate_processor_obj, best_program, targets)
+
+    emit_program(best_program, 'instr-cleaned.asm')
 
     clean_labels(best_program)
+
+    emit_program(best_program, 'labels-cleaned.asm')
 
     proc = instantiate_processor_obj()
 
@@ -451,7 +465,7 @@ if __name__ == "__main__":
 
         logging.info(f'Iterations: {best_iterations}, length program: {len(best_program)}, took: {diff_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second')
 
-        emit_program(best_program)
+        emit_program(best_program, 'final.asm')
 
         for instruction in best_program:
             logging.info(instruction['opcode'])
