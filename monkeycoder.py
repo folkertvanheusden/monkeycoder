@@ -261,6 +261,29 @@ def get_targets_multiply():
 
     return targets
 
+def clean_labels(code):
+    labels_used = set()
+
+    n_branches = 0
+
+    for instruction in code:
+        if instruction['instruction'] in [ processor.Instruction.i_jump_c, processor.Instruction.i_jump_nc, processor.Instruction.i_jump_z, processor.Instruction.i_jump_nz ]:
+            labels_used.add(instruction['destination_label'])
+
+            n_branches += 1
+
+    logging.debug(f'Used {len(labels_used)} labels in {n_branches} branches')
+
+    n_removed = 0
+
+    for instruction in code:
+        if 'label' in instruction and not instruction['label'] in labels_used:
+            del instruction['label']
+
+            n_removed += 1
+
+    logging.debug(f'Removed {n_removed} obsolete labels')
+
 if __name__ == "__main__":
     logging.basicConfig(filename='monkeycoder.log', encoding='utf-8', level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
 
@@ -286,7 +309,7 @@ if __name__ == "__main__":
     assert n_targets_ok == len(targets)
 
     logging.info('Go!')
-    targets = get_targets_shift_loop()
+    targets = get_targets_shift_1()
 
     result_q: queue.Queue[Any] = multiprocessing.Manager().Queue()
 
@@ -390,6 +413,8 @@ if __name__ == "__main__":
         time.sleep(5)
 
     end_ts = time.time()
+
+    clean_labels(best_program)
 
     proc = instantiate_processor_obj()
 
