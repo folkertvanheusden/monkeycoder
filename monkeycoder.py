@@ -5,6 +5,7 @@ from processor_z80 import processor_z80
 from processor_test import processor_test
 import copy
 import getopt
+import json
 import logging
 import multiprocessing
 import os
@@ -71,7 +72,7 @@ def test_program(proc: processor, program: List[dict], targets: List[dict], full
 
     return 2. - (float(n_targets_ok) / len(targets) + all_ok), all_ok
 
-def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss: int, cmd_q, result_q):
+def genetic_searcher(processor_obj, program_in, max_program_length: int, max_n_miss: int, cmd_q, result_q):
     try:
         best_ok      = False
 
@@ -81,11 +82,12 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
 
         random.seed()
 
-        program_meta = proc.generate_program(random.randint(1, max_program_length))
+        program_meta = copy.deepcopy(program_in)
 
-        program_meta['targets'] = targets
+        if program_meta['code'] == None:
+            program_meta['label_count'] = 0
 
-        program_meta['cost']    = 100000.
+            proc.generate_program(program_meta, random.randint(1, max_program_length))
 
         work         = None
 
@@ -171,10 +173,10 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
                         i += 1
 
             if len(work) > 0:
-                cost, ok = test_program(proc, work, targets, True)
+                cost, ok = test_program(proc, work, work_meta['targets'], True)
                 
                 if cost <= work_meta['cost']:
-                    local_best_ok   = ok
+                    best_ok   = ok
 
                     program_meta    = copy.deepcopy(work_meta)
                     program_meta['cost'] = cost
@@ -204,72 +206,6 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
     logging.info('Process is terminating...')
 
     sys.exit(0)
-
-def get_targets_add():
-    targets = []
-
-    for i in range(0, 256, 7):
-        j = (i * 13) & 255
-
-        targets.append(
-                { 'initial_values': [ { 'width' : 8, 'value' : i },
-                                      { 'width' : 8, 'value' : j } ],
-                  'result_acc': (i + j) & 255 }
-                )
-
-    return targets
-
-def get_targets_shift_1():
-    targets = []
-
-    for i in range(0, 256, 7):
-        targets.append(
-                { 'initial_values': [ { 'width' : 8, 'value' : i },
-                                      { 'width' : 8, 'value' : 1 } ],
-                  'result_acc': (i << 1) & 255 }
-                )
-
-    return targets
-
-def get_targets_shift_n():
-    targets = []
-
-    for i in range(0, 256, 7):
-        targets.append(
-                { 'initial_values': [ { 'width' : 8, 'value' : i },
-                                      { 'width' : 8, 'value' : 3 } ],
-                  'result_acc': (i << 3) & 255 }
-                )
-
-    return targets
-
-def get_targets_shift_loop():
-    targets = []
-
-    for i in range(0, 256, 11):
-        shift_n = (i * 13) & 7
-
-        targets.append(
-                { 'initial_values': [ { 'width' : 8, 'value' : i },
-                                      { 'width' : 8, 'value' : shift_n } ],
-                  'result_acc': (i << shift_n) & 255 }
-                )
-
-    return targets
-
-def get_targets_multiply():
-    targets = []
-
-    for i in range(0, 256, 7):
-        j = (i * 13) & 255
-
-        targets.append(
-                { 'initial_values': [ { 'width' : 8, 'value' : i },
-                                      { 'width' : 8, 'value' : j } ],
-                  'result_acc': (i * j) & 255 }
-                )
-
-    return targets
 
 def clean_labels(code):
     labels_used = set()
@@ -327,21 +263,25 @@ def clean_instructions(processor_obj, code, targets):
 
 if __name__ == "__main__":
     state_file      = None
+    targets_file    = None
     log_file        = 'monkeycoder.log'
     n_processes     = multiprocessing.cpu_count()
     verbose         = False
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 's:l:c:v', ['state-file=', 'log-file=', 'n-threads=', 'verbose'])
+        opts, args = getopt.getopt(sys.argv[1:], 't:s:l:c:v', ['targets=', 'state-file=', 'log-file=', 'n-threads=', 'verbose'])
 
     except getopt.GetoptError:
-        print(f'{sys.argv[0]} [-s <state-file>] -l <logfile> -c <number_of_threads> -v')
+        print(f'{sys.argv[0]} [-s <state-file>]|[-t <targets.json] -l <logfile> -c <number_of_threads> -v')
 
         sys.exit(1)
 
     for opt, arg in opts:
         if opt in [ '-s', '--state-file' ]:
             state_file = arg
+
+        elif opt in [ '-t', '--targets' ]:
+            targets_file = arg
 
         elif opt in [ '-l', '--log-file' ]:
             log_file = arg
@@ -393,16 +333,21 @@ if __name__ == "__main__":
     else:
         best_program               = dict()
 
-        best_program['targets']    = get_targets_add()
+        best_program['cost']       = 10000000.
 
         best_program['code']       = None
 
-        best_program['cost']       = 10000000
+        iterations                 = 0
+
+        if targets_file == None:
+            print('No targets selected (-t)')
+
+            sys.exit(1)
+
+        best_program['targets']    = json.loads(open(targets_file, 'rb').read())
 
         best_program['best_iterations']  = 0
         best_program['total_iterations'] = 0
-
-        iterations                 = 0
 
     result_q: queue.Queue[Any] = multiprocessing.Manager().Queue()
 
@@ -417,7 +362,7 @@ if __name__ == "__main__":
         cmd_q: queue.Queue[Any] = multiprocessing.Manager().Queue()
         cmd_qs.append(cmd_q)
 
-        proces = multiprocessing.Process(target=genetic_searcher, args=(instantiate_processor_obj, best_program['targets'], max_program_length, max_n_miss, cmd_q, result_q,))
+        proces = multiprocessing.Process(target=genetic_searcher, args=(instantiate_processor_obj, best_program, max_program_length, max_n_miss, cmd_q, result_q,))
         proces.start()
 
         processes.append(proces)
@@ -510,7 +455,7 @@ if __name__ == "__main__":
     if best_program is not None:
         diff_ts = end_ts - start_ts
 
-        logging.info(f"Iterations: {best_iterations}, length program: {len(best_program['code'])}, took: {diff_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second")
+        logging.info(f"Iterations: {best_program['best_iterations']}, length program: {len(best_program['code'])}, took: {diff_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second")
 
         emit_program(best_program, 'final.asm')
 

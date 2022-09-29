@@ -82,18 +82,14 @@ class processor:
         self.flag_zero     = False
         self.flag_negative = False
 
-    def generate_program(self, max_length: int) -> dict:
+    def generate_program(self, program, max_length: int) -> None:
         instruction_count: int = random.randint(1, max_length)
 
-        code: list[dict] = []
-
-        program = { 'code': code, 'label_count': 0 }
+        program['code']: list[dict] = []
 
         for nr in range(0, instruction_count):
             for instruction in self.pick_an_instruction(program, max_length):
-                code.append(instruction)
-
-        return program
+                program['code'].append(instruction)
 
     def pick_a_register(self, width: int, can_be_destination: Optional[bool]) -> str:
         while True:
