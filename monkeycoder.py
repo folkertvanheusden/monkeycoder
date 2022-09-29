@@ -407,7 +407,7 @@ if __name__ == "__main__":
 
             one_ok |= ok
 
-            if best_program is None or program['cost'] < best_program['cost'] or (program['cost'] == best_program['cost'] and len(program['code']) < len(best_program['code'])):
+            if best_program['code'] is None or program['cost'] < best_program['cost'] or (program['cost'] == best_program['cost'] and len(program['code']) < len(best_program['code'])):
                 best_program                     = program
                 best_program['best_iterations']  = iterations
 
