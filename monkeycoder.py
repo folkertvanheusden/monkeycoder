@@ -4,9 +4,11 @@ from processor import processor
 from processor_z80 import processor_z80
 from processor_test import processor_test
 import copy
+import getopt
 import logging
 import multiprocessing
 import os
+import pickle
 import queue
 import random
 import sys
@@ -25,13 +27,17 @@ max_program_iterations = None
 max_program_length     = 512
 max_n_miss             = max_program_length * 4  # 4 operation types (replace, append, delete, insert)
 
-n_processes            = multiprocessing.cpu_count()
+def serialize_state(program, file):
+    pickle.dump(program, open(file, 'wb'))
+
+def unserialize_state(file):
+    return pickle.load(open(file, 'rb'))
 
 def emit_program(best_program, name):
     tmp_file = '__.tmp.dat.-'
 
     fh = open(tmp_file, 'w')
-    for line in best_program:
+    for line in best_program['code']:
         if 'label' in line:
             fh.write(f'{line["label"] + ":":8s} {line["opcode"]}\n')
 
@@ -67,11 +73,7 @@ def test_program(proc: processor, program: List[dict], targets: List[dict], full
 
 def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss: int, cmd_q, result_q):
     try:
-        local_best_cost = 1000000.
-
-        local_best_prog = None
-
-        local_best_ok   = False
+        best_ok      = False
 
         proc         = processor_obj()
 
@@ -80,6 +82,10 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
         random.seed()
 
         program_meta = proc.generate_program(random.randint(1, max_program_length))
+
+        program_meta['targets'] = targets
+
+        program_meta['cost']    = 100000.
 
         work         = None
 
@@ -94,7 +100,7 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
                 cmd = cmd_q.get_nowait()
 
                 if cmd == 'results':
-                    result_q.put((n_iterations, local_best_cost, local_best_prog, local_best_ok, n_regenerate))
+                    result_q.put((n_iterations, program_meta, best_ok, n_regenerate))
 
                     n_iterations = 0
 
@@ -167,12 +173,11 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
             if len(work) > 0:
                 cost, ok = test_program(proc, work, targets, True)
                 
-                if cost <= local_best_cost:
-                    local_best_cost = cost
-                    local_best_prog = copy.deepcopy(work)
+                if cost <= work_meta['cost']:
                     local_best_ok   = ok
 
                     program_meta    = copy.deepcopy(work_meta)
+                    program_meta['cost'] = cost
 
                     miss            = 0
 
@@ -184,7 +189,10 @@ def genetic_searcher(processor_obj, targets, max_program_length: int, max_n_miss
 
                         random.seed()
 
+                        best_cost_upto_now = program_meta['cost']
+
                         program_meta = proc.generate_program(random.randint(1, max_program_length))
+                        program_meta['cost'] = best_cost_upto_now
 
                         n_regenerate += 1
 
@@ -318,16 +326,49 @@ def clean_instructions(processor_obj, code, targets):
     return None
 
 if __name__ == "__main__":
-    logging.basicConfig(filename='monkeycoder.log', encoding='utf-8', level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
+    state_file      = None
+    log_file        = 'monkeycoder.log'
+    n_processes     = multiprocessing.cpu_count()
+    verbose         = False
+
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 's:l:c:v', ['state-file=', 'log-file=', 'n-threads=', 'verbose'])
+
+    except getopt.GetoptError:
+        print(f'{sys.argv[0]} [-s <state-file>] -l <logfile> -c <number_of_threads> -v')
+
+        sys.exit(1)
+
+    for opt, arg in opts:
+        if opt in [ '-s', '--state-file' ]:
+            state_file = arg
+
+        elif opt in [ '-l', '--log-file' ]:
+            log_file = arg
+
+        elif opt in [ '-c', '--n-threads' ]:
+            n_processes = int(arg)
+
+        elif opt in [ '-v', '--verbose' ]:
+            verbose = True
+
+        else:
+            print('Option "{opt}" not known')
+
+            sys.exit(1)
+
+    log_level = logging.DEBUG if verbose else logging.INFO
+
+    logging.basicConfig(filename=log_file, encoding='utf-8', level=log_level, format='%(asctime)s %(levelname)s: %(message)s')
 
     console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
+    console.setLevel(log_level)
     console.setFormatter(logging.Formatter('%(asctime)s %(levelname)s:\t%(message)s'))
     logging.getLogger('').addHandler(console)
 
     logging.info(f'Number of processes: {n_processes}')
 
-    # verify if monkeycoder works
+    ##### verify if monkeycoder works #####
     logging.info('Verify...')
     proc = instantiate_processor_test()
 
@@ -340,10 +381,28 @@ if __name__ == "__main__":
             n_targets_ok += 1
 
     assert n_targets_ok == len(targets)
+    #######################################
 
     logging.info('Go!')
 
-    targets = get_targets_shift_loop()
+    if state_file != None and os.path.isfile(state_file):
+        best_program = unserialize_state(state_file)
+
+        iterations   = best_program['total_iterations']
+
+    else:
+        best_program               = dict()
+
+        best_program['targets']    = get_targets_add()
+
+        best_program['code']       = None
+
+        best_program['cost']       = 10000000
+
+        best_program['best_iterations']  = 0
+        best_program['total_iterations'] = 0
+
+        iterations                 = 0
 
     result_q: queue.Queue[Any] = multiprocessing.Manager().Queue()
 
@@ -358,18 +417,12 @@ if __name__ == "__main__":
         cmd_q: queue.Queue[Any] = multiprocessing.Manager().Queue()
         cmd_qs.append(cmd_q)
 
-        proces = multiprocessing.Process(target=genetic_searcher, args=(instantiate_processor_obj, targets, max_program_length, max_n_miss, cmd_q, result_q,))
+        proces = multiprocessing.Process(target=genetic_searcher, args=(instantiate_processor_obj, best_program['targets'], max_program_length, max_n_miss, cmd_q, result_q,))
         proces.start()
 
         processes.append(proces)
 
-    iterations      = 0
-
     n_regenerate    = 0
-
-    best_program    = None
-    best_cost       = 1000000
-    best_iterations = None
 
     first_output    = True
 
@@ -383,6 +436,8 @@ if __name__ == "__main__":
         batch_it    = 0
         b_n_regen   = 0
 
+        write_file  = False
+
         for q in cmd_qs:
             q.put('results')
 
@@ -390,45 +445,37 @@ if __name__ == "__main__":
 
             batch_it     += result[0]
 
-            cost          = result[1]
+            program       = result[1]
 
-            program       = result[2]
-
-            if program is None:
+            if program is None or program['code'] is None:
                 continue
 
-            ok            = result[3]
+            ok            = result[2]
 
-            b_n_regen    += result[4]
+            b_n_regen    += result[3]
 
             now           = time.time()
 
             one_ok |= ok
 
-            write_file = False
+            if best_program is None or program['cost'] < best_program['cost'] or (program['cost'] == best_program['cost'] and len(program['code']) < len(best_program['code'])):
+                best_program                     = program
+                best_program['best_iterations']  = iterations
 
-            if best_program is None or cost < best_cost:
-                best_program    = program
-                best_cost       = cost
-                best_iterations = iterations
+                any_change                 = True
 
-                write_file      = True
+                write_file                 = True
 
-                any_change = True
-
-            elif cost == best_cost:
-                if len(program) < len(best_program):
-                    best_program    = program
-                    best_iterations = iterations
-
-                    any_change = True
-
-                    write_file = True
-
-            if write_file:
                 emit_program(best_program, 'current.asm')
 
         iterations   += batch_it
+
+        best_program['total_iterations'] = iterations
+
+        if write_file:
+
+            if state_file != None:
+                serialize_state(best_program, state_file)
 
         n_regenerate += b_n_regen
 
@@ -436,8 +483,8 @@ if __name__ == "__main__":
         t_diff = now - start_ts
         i_s    = iterations / t_diff
 
-        if best_program != None:
-            logging.info(f'dt: {t_diff:6.3f}, cost: {best_cost:.6f}, length: {len(best_program):3d}, #it: {best_iterations}, cur.#it: {iterations}, i/s: {i_s:.2f}, cur i/s: {batch_it / (now - prev_ts):.2f}, ok: {one_ok}, #regen: {b_n_regen}')
+        if best_program['code'] != None:
+            logging.info(f"dt: {t_diff:6.3f}, cost: {best_program['cost']:.6f}, length: {len(best_program['code']):3d}, #it: {best_program['best_iterations']}, cur.#it: {iterations}, i/s: {i_s:.2f}, cur i/s: {batch_it / (now - prev_ts):.2f}, ok: {one_ok}, #regen: {b_n_regen}")
 
         if any_change == False and one_ok == True:
             break
@@ -448,26 +495,26 @@ if __name__ == "__main__":
 
     end_ts = time.time()
 
-    best_program = clean_instructions(instantiate_processor_obj, best_program, targets)
+    best_program['code'] = clean_instructions(instantiate_processor_obj, best_program['code'], best_program['targets'])
 
     emit_program(best_program, 'instr-cleaned.asm')
 
-    clean_labels(best_program)
+    clean_labels(best_program['code'])
 
     emit_program(best_program, 'labels-cleaned.asm')
 
     proc = instantiate_processor_obj()
 
-    best_program = proc.get_program_init(targets[0]['initial_values']) + best_program
+    best_program['code'] = proc.get_program_init(best_program['targets'][0]['initial_values']) + best_program['code']
 
     if best_program is not None:
         diff_ts = end_ts - start_ts
 
-        logging.info(f'Iterations: {best_iterations}, length program: {len(best_program)}, took: {diff_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second')
+        logging.info(f"Iterations: {best_iterations}, length program: {len(best_program['code'])}, took: {diff_ts:.2f} seconds, {iterations / diff_ts:.2f} iterations per second")
 
         emit_program(best_program, 'final.asm')
 
-        for instruction in best_program:
+        for instruction in best_program['code']:
             logging.info(instruction['opcode'])
 
     else:
