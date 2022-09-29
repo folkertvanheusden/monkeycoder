@@ -24,10 +24,6 @@ def instantiate_processor_test():
 
 instantiate_processor_obj = instantiate_processor_z80
 
-max_program_iterations = None
-max_program_length     = 512
-max_n_miss             = max_program_length * 4  # 4 operation types (replace, append, delete, insert)
-
 def serialize_state(program, file):
     pickle.dump(program, open(file, 'wb'))
 
@@ -50,7 +46,7 @@ def emit_program(best_program, name):
     os.rename(tmp_file, name)
 
 # returns 0...x where 0 is perfect and x is bad
-def test_program(proc: processor, program: List[dict], targets: List[dict], full: bool) -> Tuple[float, bool]:
+def test_program(proc: processor, program: List[dict], targets: List[dict], full: bool, max_program_length: int) -> Tuple[float, bool]:
     n_targets_ok = 0
 
     for target in targets:
@@ -72,7 +68,7 @@ def test_program(proc: processor, program: List[dict], targets: List[dict], full
 
     return 2. - (float(n_targets_ok) / len(targets) + all_ok), all_ok
 
-def genetic_searcher(processor_obj, program_in, max_program_length: int, max_n_miss: int, cmd_q, result_q):
+def genetic_searcher(processor_obj, program_in, max_n_miss: int, cmd_q, result_q):
     try:
         best_ok      = False
 
@@ -87,7 +83,7 @@ def genetic_searcher(processor_obj, program_in, max_program_length: int, max_n_m
         if program_meta['code'] == None:
             program_meta['label_count'] = 0
 
-            proc.generate_program(program_meta, random.randint(1, max_program_length))
+            proc.generate_program(program_meta, random.randint(1, program_meta['max_length']))
 
         work         = None
 
@@ -128,7 +124,7 @@ def genetic_searcher(processor_obj, program_in, max_program_length: int, max_n_m
                 if len_work == 0:
                     action = 3
 
-                elif len_work >= max_program_length:
+                elif len_work >= work_meta['max_length']:
                     action = random.choice([0, 2, 4])
 
                 else:
@@ -173,7 +169,7 @@ def genetic_searcher(processor_obj, program_in, max_program_length: int, max_n_m
                         i += 1
 
             if len(work) > 0:
-                cost, ok = test_program(proc, work, work_meta['targets'], True)
+                cost, ok = test_program(proc, work, work_meta['targets'], True, work_meta['max_length'])
                 
                 if cost <= work_meta['cost']:
                     best_ok   = ok
@@ -193,7 +189,7 @@ def genetic_searcher(processor_obj, program_in, max_program_length: int, max_n_m
 
                         best_cost_upto_now = program_meta['cost']
 
-                        program_meta = proc.generate_program(random.randint(1, max_program_length))
+                        program_meta = proc.generate_program(random.randint(1, work_meta['max_length']))
                         program_meta['cost'] = best_cost_upto_now
 
                         n_regenerate += 1
@@ -230,22 +226,22 @@ def clean_labels(code):
 
     logging.debug(f'Removed {n_removed} obsolete labels')
 
-def clean_instructions(processor_obj, code, targets):
+def clean_instructions(processor_obj, program):
     try:
         proc         = processor_obj()
 
         i     = 0
         n_del = 0
 
-        while i < len(code):
-            work = copy.deepcopy(code)
+        while i < len(program['code']):
+            work = copy.deepcopy(program)
 
             work.pop(i)
 
-            cost, ok = test_program(proc, work, targets, False)
+            cost, ok = test_program(proc, work, targets, False, work['max_length'])
 
             if ok:
-                code   = work
+                program.pop(i)
 
                 n_del += 1
 
@@ -262,14 +258,15 @@ def clean_instructions(processor_obj, code, targets):
     return None
 
 if __name__ == "__main__":
-    state_file      = None
-    targets_file    = None
-    log_file        = 'monkeycoder.log'
-    n_processes     = multiprocessing.cpu_count()
-    verbose         = False
+    state_file         = None
+    targets_file       = None
+    log_file           = 'monkeycoder.log'
+    n_processes        = multiprocessing.cpu_count()
+    max_program_length = 512
+    verbose            = False
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 't:s:l:c:v', ['targets=', 'state-file=', 'log-file=', 'n-threads=', 'verbose'])
+        opts, args = getopt.getopt(sys.argv[1:], 't:s:l:c:n:v', ['targets=', 'state-file=', 'log-file=', 'n-threads=', 'max-length=', 'verbose'])
 
     except getopt.GetoptError:
         print(f'{sys.argv[0]} [-s <state-file>]|[-t <targets.json] -l <logfile> -c <number_of_threads> -v')
@@ -289,6 +286,9 @@ if __name__ == "__main__":
         elif opt in [ '-c', '--n-threads' ]:
             n_processes = int(arg)
 
+        elif opt in [ '-n', '--max-length' ]:
+            max_program_length = int(arg)
+
         elif opt in [ '-v', '--verbose' ]:
             verbose = True
 
@@ -297,7 +297,9 @@ if __name__ == "__main__":
 
             sys.exit(1)
 
-    log_level = logging.DEBUG if verbose else logging.INFO
+    max_n_miss = max_program_length * 4  # 4 operation types (replace, append, delete, insert)
+
+    log_level  = logging.DEBUG if verbose else logging.INFO
 
     logging.basicConfig(filename=log_file, encoding='utf-8', level=log_level, format='%(asctime)s %(levelname)s: %(message)s')
 
@@ -310,7 +312,7 @@ if __name__ == "__main__":
 
     ##### verify if monkeycoder works #####
     logging.info('Verify...')
-    proc = instantiate_processor_test()
+    proc      = instantiate_processor_test()
 
     test_program_code, targets = proc.generate_test_program()
 
@@ -337,6 +339,8 @@ if __name__ == "__main__":
 
         best_program['code']       = None
 
+        best_program['max_length'] = max_program_length
+
         iterations                 = 0
 
         if targets_file == None:
@@ -362,7 +366,7 @@ if __name__ == "__main__":
         cmd_q: queue.Queue[Any] = multiprocessing.Manager().Queue()
         cmd_qs.append(cmd_q)
 
-        proces = multiprocessing.Process(target=genetic_searcher, args=(instantiate_processor_obj, best_program, max_program_length, max_n_miss, cmd_q, result_q,))
+        proces = multiprocessing.Process(target=genetic_searcher, args=(instantiate_processor_obj, best_program, max_n_miss, cmd_q, result_q,))
         proces.start()
 
         processes.append(proces)
@@ -440,7 +444,7 @@ if __name__ == "__main__":
 
     end_ts = time.time()
 
-    best_program['code'] = clean_instructions(instantiate_processor_obj, best_program['code'], best_program['targets'])
+    clean_instructions(instantiate_processor_obj, best_program)
 
     emit_program(best_program, 'instr-cleaned.asm')
 
